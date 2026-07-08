@@ -14,6 +14,8 @@ import factCheckIcon from '@material-design-icons/svg/outlined/fact_check.svg?ra
 import groupIcon from '@material-design-icons/svg/outlined/group.svg?raw'
 import historyIcon from '@material-design-icons/svg/outlined/history.svg?raw'
 import infoIcon from '@material-design-icons/svg/outlined/info.svg?raw'
+import keyboardDoubleArrowLeftIcon from '@material-design-icons/svg/outlined/keyboard_double_arrow_left.svg?raw'
+import keyboardDoubleArrowRightIcon from '@material-design-icons/svg/outlined/keyboard_double_arrow_right.svg?raw'
 import libraryBooksIcon from '@material-design-icons/svg/outlined/library_books.svg?raw'
 import logoutIcon from '@material-design-icons/svg/outlined/logout.svg?raw'
 import manageSearchIcon from '@material-design-icons/svg/outlined/manage_search.svg?raw'
@@ -46,6 +48,8 @@ const iconSources = {
   group: groupIcon,
   history: historyIcon,
   info: infoIcon,
+  keyboardDoubleArrowLeft: keyboardDoubleArrowLeftIcon,
+  keyboardDoubleArrowRight: keyboardDoubleArrowRightIcon,
   libraryBooks: libraryBooksIcon,
   logout: logoutIcon,
   manageSearch: manageSearchIcon,

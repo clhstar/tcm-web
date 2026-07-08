@@ -39,6 +39,7 @@ import { useNotification } from '../../components/notificationContext'
 import { PatientForm } from './PatientForm'
 
 type FormMode = 'idle' | 'create' | 'edit'
+type PatientRouteMode = 'create' | 'edit' | 'profile'
 type WorkspaceView = 'chat' | 'history' | 'summary' | 'me'
 type ConsultationMutationKind = 'stream' | 'summary' | 'complete'
 type ConsultationMutationOwner = {
@@ -118,6 +119,9 @@ export function PatientIntakeWorkspace() {
   const newConversationTokenRef = useRef<string | null>(null)
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const activeView = readWorkspaceView(location.pathname)
+  const patientRouteMode = activeView === 'me' ? readPatientRouteMode(location.search) : null
+  const activeFormMode = activeView === 'me' ? readActiveFormMode(patientRouteMode, selectedPatient) : formMode
+  const isPatientProfileOpen = activeView === 'me' ? patientRouteMode === 'profile' && Boolean(selectedPatient) : isMyProfileOpen
 
   useEffect(() => {
     void loadPatients(page, activeKeyword)
@@ -145,6 +149,10 @@ export function PatientIntakeWorkspace() {
 
   function navigateToView(nextView: WorkspaceView) {
     navigate(WORKSPACE_ROUTES[nextView])
+  }
+
+  function navigateToPatientRoute(mode?: PatientRouteMode) {
+    navigate(mode ? `${WORKSPACE_ROUTES.me}?mode=${mode}` : WORKSPACE_ROUTES.me)
   }
 
   function showPatientError(message: string) {
@@ -344,7 +352,7 @@ export function PatientIntakeWorkspace() {
     setSelectedPatient(patient)
     setIsMyProfileOpen(true)
     setFormMode('idle')
-    navigateToView('me')
+    navigateToPatientRoute('profile')
     setPage(1)
     await loadPatients(1, activeKeyword)
   }
@@ -357,7 +365,7 @@ export function PatientIntakeWorkspace() {
     setIsMyProfileOpen(true)
     setPatients((current) => current.map((item) => (item.id === patient.id ? patient : item)))
     setFormMode('idle')
-    navigateToView('me')
+    navigateToPatientRoute('profile')
   }
 
   function selectPatient(patient: Patient, nextView: WorkspaceView = 'chat') {
@@ -367,7 +375,11 @@ export function PatientIntakeWorkspace() {
     selectedPatientIdRef.current = patient.id
     setSelectedPatient(patient)
     setFormMode('idle')
-    navigateToView(nextView)
+    if (nextView === 'me') {
+      navigateToPatientRoute('profile')
+    } else {
+      navigateToView(nextView)
+    }
     setIsDraftingConsultation(false)
     setIsMyProfileOpen(nextView === 'me')
     setPatientError('')
@@ -383,20 +395,20 @@ export function PatientIntakeWorkspace() {
     setIsArchiveSheetOpen(false)
     setFormMode('create')
     setIsMyProfileOpen(false)
-    navigateToView('me')
+    navigateToPatientRoute('create')
   }
 
   function openEditForm() {
     setFormMode('edit')
     setIsMyProfileOpen(true)
-    navigateToView('me')
+    navigateToPatientRoute('edit')
   }
 
   function closeForm() {
-    const shouldReturnToProfile = formMode === 'edit' && Boolean(selectedPatient)
+    const shouldReturnToProfile = activeFormMode === 'edit' && Boolean(selectedPatient)
     setFormMode('idle')
     setIsMyProfileOpen(shouldReturnToProfile)
-    navigateToView('me')
+    navigateToPatientRoute(shouldReturnToProfile ? 'profile' : undefined)
   }
 
   function openPatientProfile(patient: Patient) {
@@ -407,7 +419,7 @@ export function PatientIntakeWorkspace() {
   function backToPatientDirectory() {
     setFormMode('idle')
     setIsMyProfileOpen(false)
-    navigateToView('me')
+    navigateToPatientRoute()
   }
 
   function openNewConsultationDraft() {
@@ -1018,14 +1030,14 @@ export function PatientIntakeWorkspace() {
 
           {activeView === 'me' ? (
             <div className="my-route">
-              {formMode === 'create' ? (
+              {activeFormMode === 'create' ? (
                 <>
                   <PanelHeading title="新增档案" description="只记录接诊前必须确认的基础信息。" />
                   <PatientForm submitLabel="保存患者" onCancel={closeForm} onSubmit={handleCreate} />
                 </>
               ) : null}
 
-              {formMode === 'edit' && selectedPatient ? (
+              {activeFormMode === 'edit' && selectedPatient ? (
                 <>
                   <PanelHeading title="编辑档案" description="修改后会同步到患者基础信息。" />
                   <PatientForm
@@ -1037,7 +1049,7 @@ export function PatientIntakeWorkspace() {
                 </>
               ) : null}
 
-              {formMode === 'idle' && isMyProfileOpen && selectedPatient ? (
+              {activeFormMode === 'idle' && isPatientProfileOpen && selectedPatient ? (
                 <PatientProfileCard
                   patient={selectedPatient}
                   age={selectedPatientAge}
@@ -1046,7 +1058,7 @@ export function PatientIntakeWorkspace() {
                 />
               ) : null}
 
-              {formMode === 'idle' && !isMyProfileOpen ? (
+              {activeFormMode === 'idle' && !isPatientProfileOpen ? (
                 <PatientDirectory
                   keyword={keyword}
                   page={page}
@@ -1466,6 +1478,20 @@ function readWorkspaceView(pathname: string): WorkspaceView {
   if (pathname.startsWith('/summary')) return 'summary'
   if (pathname.startsWith('/patients')) return 'me'
   return 'chat'
+}
+
+function readPatientRouteMode(search: string): PatientRouteMode | null {
+  const mode = new URLSearchParams(search).get('mode')
+  if (mode === 'create' || mode === 'edit' || mode === 'profile') {
+    return mode
+  }
+  return null
+}
+
+function readActiveFormMode(patientRouteMode: PatientRouteMode | null, patient: Patient | null): FormMode {
+  if (patientRouteMode === 'create') return 'create'
+  if (patientRouteMode === 'edit' && patient) return 'edit'
+  return 'idle'
 }
 
 function getAge(birthday: string) {
