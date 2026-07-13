@@ -1,6 +1,5 @@
 import { z } from 'zod'
-import { API_BASE_URL } from '../config/global'
-import { TOKEN_STORAGE_KEY } from './auth'
+import { requestJson } from '../shared/api/httpClient'
 
 const REQUEST_FALLBACK_MESSAGE = '请求失败，请稍后重试'
 
@@ -105,48 +104,9 @@ export async function deletePatient(id: number): Promise<void> {
 }
 
 async function requestPatient(path: string, init: RequestInit = {}): Promise<unknown> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    method: init.method ?? 'GET',
-    headers: requestHeaders(init.headers),
+  return requestJson(path, init, {
+    fallbackMessage: REQUEST_FALLBACK_MESSAGE,
   })
-  const payload = await readJson(response)
-
-  if (!response.ok) {
-    throw new Error(readErrorMessage(payload))
-  }
-
-  return payload
-}
-
-function requestHeaders(extraHeaders?: HeadersInit) {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  }
-  const token = localStorage.getItem(TOKEN_STORAGE_KEY)
-  if (token) {
-    headers.Authorization = `Bearer ${token}`
-  }
-  if (extraHeaders) {
-    new Headers(extraHeaders).forEach((value, key) => {
-      headers[key] = value
-    })
-  }
-
-  return headers
-}
-
-async function readJson(response: Response): Promise<unknown> {
-  try {
-    return await response.json()
-  } catch {
-    return null
-  }
-}
-
-function readErrorMessage(payload: unknown) {
-  const parsed = z.object({ message: z.string() }).safeParse(payload)
-  return parsed.success ? parsed.data.message : REQUEST_FALLBACK_MESSAGE
 }
 
 function normalizePatientInput(input: PatientInput) {

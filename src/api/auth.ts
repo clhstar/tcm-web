@@ -1,7 +1,6 @@
 import { z } from "zod";
-import { API_BASE_URL } from "../config/global";
-
-export const TOKEN_STORAGE_KEY = "tcm_access_token";
+import { requestJson } from "../shared/api/httpClient";
+export { TOKEN_STORAGE_KEY } from "../shared/auth/sessionStorage";
 
 const userProfileSchema = z.object({
   id: z.number(),
@@ -10,7 +9,7 @@ const userProfileSchema = z.object({
   role: z.string().default("USER"),
 });
 
-const authPayloadSchema = z.object({
+export const authPayloadSchema = z.object({
   token: z.string(),
   tokenType: z.string(),
   expiresIn: z.number(),
@@ -56,35 +55,25 @@ async function requestAuth(
   path: string,
   body: LoginInput | RegisterInput,
 ): Promise<AuthPayload> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const payload = await requestJson(path, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify(body),
+  }, {
+    authenticated: false,
+    fallbackMessage: "Authentication failed",
   });
-
-  const payload = await response.json();
-  if (!response.ok) {
-    throw new Error(payload.message ?? "Authentication failed");
-  }
 
   return authResponseSchema.parse(payload).data;
 }
 
 async function requestRegister(body: RegisterInput): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/user/register`, {
+  const payload = await requestJson("/api/user/register", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify(body),
+  }, {
+    authenticated: false,
+    fallbackMessage: "Registration failed",
   });
-
-  const payload = await response.json();
-  if (!response.ok) {
-    throw new Error(payload.message ?? "Registration failed");
-  }
 
   registerResponseSchema.parse(payload);
 }

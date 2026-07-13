@@ -2,24 +2,24 @@ import { describe, expect, it } from 'vitest'
 import { restoreTcmFlowHistory } from './tcmFlowHistory'
 
 describe('restoreTcmFlowHistory', () => {
-  it('restores only the latest visible clarification run as the resume target', () => {
+  it('leaves clarification resume selection to the server checkpoint', () => {
     const restored = restoreTcmFlowHistory(101, [
       { role: 'assistant', content: 'Earlier question', run_id: 'run-old', status: 'need_clarification' },
       { role: 'user', content: 'Earlier answer' },
       { role: 'assistant', content: 'Current question', run_id: '  run-current  ', status: 'need_clarification' },
     ])
 
-    expect(restored.resumeTargetRunId).toBe('run-current')
+    expect(restored).not.toHaveProperty('resumeTargetRunId')
   })
 
-  it('clears a stale clarification target when a later assistant turn completed', () => {
+  it('does not derive a client resume target from completed history', () => {
     const restored = restoreTcmFlowHistory(101, [
       { role: 'assistant', content: 'Question', run_id: 'run-waiting', status: 'need_clarification' },
       { role: 'user', content: 'Answer' },
       { role: 'assistant', content: 'Completed response', run_id: 'run-complete', status: 'completed' },
     ])
 
-    expect(restored.resumeTargetRunId).toBeNull()
+    expect(restored).not.toHaveProperty('resumeTargetRunId')
   })
 
   it('restores enriched role history with collaboration steps from the assistant trace', () => {

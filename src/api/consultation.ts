@@ -1,6 +1,10 @@
 import { z } from 'zod'
-import { API_BASE_URL } from '../config/global'
-import { TOKEN_STORAGE_KEY } from './auth'
+import {
+  fetchApiResponse,
+  readApiErrorMessage,
+  readJsonResponse,
+  requestJson,
+} from '../shared/api/httpClient'
 import { readSseStream, type SseEvent } from './sse'
 
 const REQUEST_FALLBACK_MESSAGE = 'Request failed, please try again later.'
@@ -9,23 +13,35 @@ const RUN_STATUS_DELAYS_MS = [0, 50, 100] as const
 
 const nullableString = z.string().nullable().optional()
 
-const consultationSchema = z.object({
+export const consultationContextSchema = z.object({
+  consultation_record_id: z.number(),
+  status: z.enum(['IN_PROGRESS', 'PAUSED', 'COMPLETED', 'CANCELLED']),
+  record_version: z.number(),
+  analysis_ready: z.boolean(),
+})
+
+const conversationSchema = z.object({
   id: z.number(),
-  patientId: z.number(),
+  patientId: z.number().nullable().optional(),
   patientName: nullableString,
-  chiefComplaint: nullableString,
-  symptoms: nullableString,
-  tongue: nullableString,
-  pulse: nullableString,
-  symptomSummary: nullableString,
-  possibleSyndrome: nullableString,
-  suggestion: nullableString,
-  riskWarning: nullableString,
+  title: nullableString,
   status: nullableString,
-  statusName: nullableString,
+  consultationContext: consultationContextSchema.nullable().optional(),
   createTime: nullableString,
   updateTime: nullableString,
-})
+}).transform((value) => ({
+  ...value,
+  patientId: value.patientId ?? null,
+  chiefComplaint: value.title,
+  statusName: consultationStatusLabel(value.consultationContext?.status ?? value.status),
+  symptoms: null,
+  tongue: null,
+  pulse: null,
+  symptomSummary: null,
+  possibleSyndrome: null,
+  suggestion: null,
+  riskWarning: null,
+}))
 
 const tcmFlowTraceItemSchema = z.record(z.string(), z.unknown())
 
@@ -52,13 +68,13 @@ const consultationPageSchema = z.object({
   total: z.number(),
   pageNum: z.number(),
   pageSize: z.number(),
-  records: z.array(consultationSchema),
+  records: z.array(conversationSchema),
 })
 
 const consultationResponseSchema = z.object({
   code: z.number(),
   message: z.string(),
-  data: consultationSchema,
+  data: conversationSchema,
 })
 
 const consultationMessagesResponseSchema = z.object({
@@ -93,7 +109,8 @@ const consultationPageResponseSchema = z.object({
   data: consultationPageSchema,
 })
 
-export type Consultation = z.infer<typeof consultationSchema>
+export type ConsultationContext = z.infer<typeof consultationContextSchema>
+export type Consultation = z.infer<typeof conversationSchema>
 export type ConsultationMessage = {
   id: number
   consultationRecordId: number
@@ -115,13 +132,15 @@ export type StreamConsultationRunResult = {
 export type TcmFlowSseEvent = SseEvent
 
 export type ConsultationCreateInput = {
-  patientId: number
+  patientId?: number
   chiefComplaint: string
 }
 
 export type StreamConsultationRunInput = {
   consultationId: number
   message: string
+  patientId?: number
+  signal?: AbortSignal
   onEvent: (event: TcmFlowSseEvent) => void
 }
 
@@ -133,13 +152,11 @@ type ConsultationListInput = {
   status?: string
 }
 
-export async function createConsultation(input: ConsultationCreateInput): Promise<Consultation> {
-  const payload = await requestConsultation('/api/consultations', {
+export async function createConsultation(_input: ConsultationCreateInput): Promise<Consultation> {
+  void _input
+  const payload = await requestConsultation('/api/conversations', {
     method: 'POST',
-    body: JSON.stringify({
-      patientId: input.patientId,
-      chiefComplaint: input.chiefComplaint.trim(),
-    }),
+    body: JSON.stringify({}),
   })
   return consultationResponseSchema.parse(payload).data
 }
@@ -153,26 +170,22 @@ export async function listConsultations(input: ConsultationListInput): Promise<C
   if (input.patientId != null) {
     params.set('patientId', String(input.patientId))
   }
-  const keyword = input.keyword?.trim()
-  if (keyword) {
-    params.set('keyword', keyword)
-  }
   const status = input.status?.trim()
   if (status) {
     params.set('status', status)
   }
 
-  const payload = await requestConsultation(`/api/consultations/page?${params.toString()}`)
+  const payload = await requestConsultation(`/api/conversations/page?${params.toString()}`)
   return consultationPageResponseSchema.parse(payload).data
 }
 
 export async function getConsultation(id: number): Promise<Consultation> {
-  const payload = await requestConsultation(`/api/consultations/${id}`)
+  const payload = await requestConsultation(`/api/conversations/${id}`)
   return consultationResponseSchema.parse(payload).data
 }
 
 export async function listConsultationMessages(id: number): Promise<TcmFlowMessage[]> {
-  const payload = await requestConsultation(`/api/consultations/${id}/messages`)
+  const payload = await requestConsultation(`/api/conversations/${id}/messages`)
   return consultationMessagesResponseSchema.parse(payload).data
 }
 
@@ -180,17 +193,19 @@ export async function streamConsultationRun(
   input: StreamConsultationRunInput,
 ): Promise<StreamConsultationRunResult> {
   const normalizedMessage = input.message.trim()
-  const response = await fetch(
-    `${API_BASE_URL}/api/consultations/${encodeURIComponent(String(input.consultationId))}/runs/stream`,
+  const response = await fetchApiResponse(
+    `/api/conversations/${encodeURIComponent(String(input.consultationId))}/runs/stream`,
     {
       method: 'POST',
-      headers: requestHeaders(),
-      body: JSON.stringify({ content: normalizedMessage }),
+      body: JSON.stringify(input.patientId == null
+        ? { content: normalizedMessage }
+        : { content: normalizedMessage, consultationContext: { patientId: input.patientId } }),
+      signal: input.signal,
     },
   )
 
   if (!response.ok) {
-    throw new Error(readErrorMessage(await readJson(response)))
+    throw new Error(readApiErrorMessage(await readJsonResponse(response), REQUEST_FALLBACK_MESSAGE))
   }
   if (!response.body) {
     throw new Error('Consultation stream response has no readable body.')
@@ -247,63 +262,29 @@ export async function streamConsultationRun(
   return { runId, runStatus, transportEnded: hasEnd }
 }
 
-export async function generateConsultationSummary(id: number): Promise<Consultation> {
-  const payload = await requestConsultation(`/api/consultations/${id}/summary`, {
-    method: 'POST',
-  })
-  return consultationResponseSchema.parse(payload).data
+export async function completeConsultation(id: number): Promise<ConsultationContext> {
+  return controlConsultation(id, 'complete')
 }
 
-export async function completeConsultation(id: number): Promise<Consultation> {
-  const payload = await requestConsultation(`/api/consultations/${id}/complete`, {
+export async function pauseConversationConsultation(id: number): Promise<ConsultationContext> {
+  return controlConsultation(id, 'pause')
+}
+
+export async function cancelConversationConsultation(id: number): Promise<ConsultationContext> {
+  return controlConsultation(id, 'cancel')
+}
+
+async function controlConsultation(id: number, action: 'pause' | 'complete' | 'cancel') {
+  const payload = await requestConsultation(`/api/conversations/${id}/consultation/${action}`, {
     method: 'POST',
   })
-  return consultationResponseSchema.parse(payload).data
+  return z.object({ code: z.number(), message: z.string(), data: consultationContextSchema }).parse(payload).data
 }
 
 async function requestConsultation(path: string, init: RequestInit = {}): Promise<unknown> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    method: init.method ?? 'GET',
-    headers: requestHeaders(init.headers),
+  return requestJson(path, init, {
+    fallbackMessage: REQUEST_FALLBACK_MESSAGE,
   })
-  const payload = await readJson(response)
-
-  if (!response.ok) {
-    throw new Error(readErrorMessage(payload))
-  }
-
-  return payload
-}
-
-function requestHeaders(extraHeaders?: HeadersInit) {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  }
-  const token = localStorage.getItem(TOKEN_STORAGE_KEY)
-  if (token) {
-    headers.Authorization = `Bearer ${token}`
-  }
-  if (extraHeaders) {
-    new Headers(extraHeaders).forEach((value, key) => {
-      headers[key] = value
-    })
-  }
-
-  return headers
-}
-
-async function readJson(response: Response): Promise<unknown> {
-  try {
-    return await response.json()
-  } catch {
-    return null
-  }
-}
-
-function readErrorMessage(payload: unknown) {
-  const parsed = z.object({ message: z.string() }).safeParse(payload)
-  return parsed.success ? parsed.data.message : REQUEST_FALLBACK_MESSAGE
 }
 
 async function recoverRunStatus(
@@ -349,17 +330,16 @@ async function requestRunStatus(
   runId: string,
 ): Promise<ConsultationRunStatus> {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/consultations/${encodeURIComponent(String(consultationId))}/runs/${encodeURIComponent(runId)}`,
+    const response = await fetchApiResponse(
+      `/api/conversations/${encodeURIComponent(String(consultationId))}/runs/${encodeURIComponent(runId)}`,
       {
         method: 'GET',
-        headers: requestHeaders(),
       },
     )
-    const payload = await readJson(response)
+    const payload = await readJsonResponse(response)
 
     if (!response.ok) {
-      throw new RunStatusRecoveryError(readErrorMessage(payload))
+      throw new RunStatusRecoveryError(readApiErrorMessage(payload, REQUEST_FALLBACK_MESSAGE))
     }
 
     const parsed = runStatusResponseSchema.safeParse(payload)
@@ -438,4 +418,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function delay(milliseconds: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, milliseconds))
+}
+
+export function consultationStatusLabel(status: string | null | undefined) {
+  return ({ IN_PROGRESS: '问诊中', PAUSED: '已暂停', COMPLETED: '已完成', CANCELLED: '已取消' } as Record<string, string>)[status ?? ''] ?? '普通对话'
 }

@@ -6,6 +6,7 @@ export type PublicResponse = {
   assistantMessage: string
   pendingClarification: string[]
   references: unknown[]
+  suggestedAction?: 'add_consultation_tag'
 }
 
 export type MessageDeltaOptions = {
@@ -149,6 +150,7 @@ function normalizePublicResponse(value: unknown): PublicResponse | null {
       ? value.pending_clarification.filter((item): item is string => typeof item === 'string')
       : [],
     references: Array.isArray(value.references) ? cloneJsonValues(value.references) : [],
+    ...(value.suggested_action === 'add_consultation_tag' ? { suggestedAction: value.suggested_action } : {}),
   }
 }
 

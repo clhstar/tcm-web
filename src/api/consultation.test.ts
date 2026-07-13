@@ -108,7 +108,7 @@ describe('consultation history API', () => {
 
     await expect(listConsultationMessages(101)).resolves.toEqual(history)
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://localhost:4040/api/consultations/101/messages',
+      'http://localhost:4040/api/conversations/101/messages',
       expect.objectContaining({
         method: 'GET',
         headers: expect.objectContaining({
@@ -196,7 +196,7 @@ describe('consultation stream API', () => {
     })
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://localhost:4040/api/consultations/101/runs/stream',
+      'http://localhost:4040/api/conversations/101/runs/stream',
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({
@@ -352,7 +352,7 @@ describe('consultation stream API', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
-  it('sends the interrupted run id when resuming clarification', async () => {
+  it('sends only content when the server resumes a pending clarification checkpoint', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
@@ -368,7 +368,6 @@ describe('consultation stream API', () => {
       streamConsultationRun({
         consultationId: 101,
         message: 'already two weeks',
-        resumeRunId: 'run-1',
         onEvent: vi.fn(),
       }),
     ).resolves.toEqual({
@@ -378,9 +377,9 @@ describe('consultation stream API', () => {
     })
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://localhost:4040/api/consultations/101/runs/stream',
+      'http://localhost:4040/api/conversations/101/runs/stream',
       expect.objectContaining({
-        body: JSON.stringify({ content: 'already two weeks', resumeRunId: 'run-1' }),
+        body: JSON.stringify({ content: 'already two weeks' }),
       }),
     )
   })
@@ -492,7 +491,7 @@ describe('consultation stream API', () => {
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
-      'http://localhost:4040/api/consultations/101/runs/run-1',
+      'http://localhost:4040/api/conversations/101/runs/run-1',
       expect.objectContaining({ method: 'GET' }),
     )
   })
@@ -558,7 +557,7 @@ describe('consultation stream API', () => {
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
-      'http://localhost:4040/api/consultations/101/runs/run-1',
+      'http://localhost:4040/api/conversations/101/runs/run-1',
       expect.objectContaining({
         headers: expect.objectContaining({ Authorization: 'Bearer token-123' }),
       }),

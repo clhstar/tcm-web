@@ -15,11 +15,11 @@ export function ConsultationHistoryPanel({
   onSelect,
 }: ConsultationHistoryPanelProps) {
   return (
-    <section className="consultation-card consultation-history-panel" aria-label="问诊历史">
+    <section className="consultation-card consultation-history-panel" aria-label="对话历史">
       <div className="consultation-panel-header">
         <div>
-          <p className="status-label">历史问诊</p>
-          <h3>问诊记录</h3>
+          <p className="status-label">历史对话</p>
+          <h3>对话记录</h3>
         </div>
         <strong>{consultations.length}</strong>
       </div>
@@ -28,8 +28,8 @@ export function ConsultationHistoryPanel({
 
       {!isLoading && consultations.length === 0 ? (
         <div className="empty-state">
-          <strong>暂时还没有问诊记录</strong>
-          <p>先记录主诉并开始本次问诊，系统会自动沉淀到历史列表。</p>
+          <strong>暂时还没有对话记录</strong>
+          <p>发送第一条消息后，对话会自动保存在历史列表。</p>
         </div>
       ) : null}
 
@@ -48,7 +48,7 @@ export function ConsultationHistoryPanel({
           >
             <span className="history-primary">
               <strong>{consultation.chiefComplaint || '未记录主诉'}</strong>
-              <small>{consultation.patientName || '当前患者'}</small>
+              <small>{consultation.patientName || '未绑定患者'}</small>
             </span>
             <span className="history-meta">
               <em>{consultation.statusName || consultation.status || '未开始'}</em>

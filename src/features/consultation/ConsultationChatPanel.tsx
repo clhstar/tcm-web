@@ -2,7 +2,8 @@ import { Fragment, type FormEvent, useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { MaterialIcon } from '../../components/MaterialIcon'
-import type { Consultation, ConsultationMessage } from '../../api/consultation'
+import type { Consultation, ConsultationContext, ConsultationMessage } from '../../api/consultation'
+import type { Patient } from '../../api/patient'
 import type { CollaborationStatus, CollaborationStep } from './collaboration'
 import type { TcmFlowEventsByMessageId, TcmFlowToolEvent } from './tcmFlowHistory'
 
@@ -20,13 +21,24 @@ type ConsultationChatPanelProps = {
   messages: ConsultationMessage[]
   draft: string
   archiveLabel: string
+  errorMessage: string
   isLoading: boolean
   isSending: boolean
   tcmFlowEventsByMessageId: TcmFlowEventsByMessageId
   collaborationByMessageId: Record<number, CollaborationStep[]>
+  taggedPatient: Patient | null
+  consultationContext: ConsultationContext | null
+  showTagSuggestion: boolean
+  isControllingConsultation: boolean
   onDraftChange: (value: string) => void
   onOpenArchiveSheet: () => void
+  onRemoveTag: () => Promise<void>
+  onAddSuggestedTag: () => void
+  onComplete: () => Promise<void>
+  onCancel: () => Promise<void>
   onOpenPatientProfile: () => void
+  canOpenPatientProfile: boolean
+  onRetryHistory: () => void
   onSend: () => Promise<void>
 }
 
@@ -35,16 +47,29 @@ export function ConsultationChatPanel({
   messages,
   draft,
   archiveLabel,
+  errorMessage,
   isLoading,
   isSending,
   tcmFlowEventsByMessageId,
   collaborationByMessageId,
+  taggedPatient,
+  consultationContext,
+  showTagSuggestion,
+  isControllingConsultation,
   onDraftChange,
   onOpenArchiveSheet,
+  onRemoveTag,
+  onAddSuggestedTag,
+  onComplete,
+  onCancel,
   onOpenPatientProfile,
+  canOpenPatientProfile,
+  onRetryHistory,
   onSend,
 }: ConsultationChatPanelProps) {
   const [expandedThinkingMessageId, setExpandedThinkingMessageId] = useState<number | null>(null)
+  const isTerminalConsultation =
+    consultationContext?.status === 'COMPLETED' || consultationContext?.status === 'CANCELLED'
   const [expandedCollaborationMessageId, setExpandedCollaborationMessageId] = useState<number | null>(null)
   const latestAssistantMessageId = [...messages].reverse().find((message) => message.role === 'ASSISTANT')?.id
 
@@ -85,7 +110,19 @@ export function ConsultationChatPanel({
         <>
           {isLoading ? <p className="muted-line">正在同步问诊消息...</p> : null}
 
-          <div className="consultation-chat-body">
+          <div className={errorMessage && messages.length === 0 ? 'consultation-chat-body has-empty-error' : 'consultation-chat-body'}>
+            {errorMessage ? (
+              <div className="consultation-inline-error" role="alert">
+                <MaterialIcon name="error" />
+                <div>
+                  <strong>问诊记录暂时未完整载入</strong>
+                  <p>{errorMessage}</p>
+                </div>
+                <button type="button" className="ghost-button" onClick={onRetryHistory} disabled={isLoading}>
+                  {isLoading ? '重试中...' : '重新载入'}
+                </button>
+              </div>
+            ) : null}
             <div className="consultation-chat-stream">
               {messages.map((message) => {
                 const messageEvents = tcmFlowEventsByMessageId[message.id] ?? []
@@ -136,25 +173,53 @@ export function ConsultationChatPanel({
           </div>
 
           <form className="consultation-message-form" onSubmit={handleSubmit}>
-            <label htmlFor="consultation-message-input">补充问诊信息</label>
+            <label htmlFor="consultation-message-input">发送消息</label>
+            {consultationContext ? (
+              <div className={`consultation-status-banner ${consultationContext.status.toLowerCase()}`} role="status">
+                <strong>{statusLabel(consultationContext.status)}</strong>
+                <span>{consultationContext.status === 'PAUSED' ? '普通对话仍可继续；重新添加同患者标签可恢复问诊。' : consultationContext.analysis_ready ? '分析已就绪，请人工确认完成或取消。' : '问诊状态已同步。'}</span>
+              </div>
+            ) : null}
+            {showTagSuggestion && !taggedPatient && !isTerminalConsultation ? (
+              <div className="consultation-tag-suggestion" role="status">
+                <span>这条对话可能适合进入问诊，仅在你确认后添加标签。</span>
+                <button type="button" onClick={onAddSuggestedTag}>添加问诊标签</button>
+              </div>
+            ) : null}
             <div className="message-input-shell archive-input-shell">
               <input
                 id="consultation-message-input"
                 value={draft}
                 onChange={(event) => onDraftChange(event.target.value)}
-                placeholder="请输入本轮问诊补充信息"
+                placeholder={taggedPatient ? '请输入本轮问诊补充信息' : '发送普通消息'}
                 disabled={isLoading || isSending}
               />
               <div className="message-archive-row">
-                <button type="button" className="archive-consult-chip" onClick={onOpenArchiveSheet}>
-                  {archiveLabel}
-                  <MaterialIcon name="swapHoriz" />
-                </button>
-                <button type="button" className="archive-profile-link" onClick={onOpenPatientProfile}>
+                {isTerminalConsultation ? (
+                  <span className="archive-consult-chip consultation-tag-chip consultation-terminal-chip">
+                    <MaterialIcon name="info" />终态不可恢复，请新建对话
+                  </span>
+                ) : taggedPatient ? (
+                  <span className="archive-consult-chip consultation-tag-chip">
+                    <MaterialIcon name="medicalServices" />问诊·{taggedPatient.name}
+                    <button type="button" aria-label="删除问诊标签并暂停问诊" onClick={() => void onRemoveTag()} disabled={isLoading || isSending || isControllingConsultation}>×</button>
+                  </span>
+                ) : (
+                  <button type="button" className="archive-consult-chip" title={archiveLabel} onClick={onOpenArchiveSheet} disabled={isLoading || isSending}>
+                    <MaterialIcon name="add" />添加问诊标签
+                  </button>
+                )}
+                <button type="button" className="archive-profile-link" onClick={onOpenPatientProfile} disabled={!canOpenPatientProfile}>
                   查看档案
                   <MaterialIcon name="chevronRight" />
                 </button>
               </div>
+              {consultationContext && (consultationContext.status === 'IN_PROGRESS' || consultationContext.status === 'PAUSED') ? (
+                <div className="consultation-control-row">
+                  <button type="button" onClick={() => void onComplete()} disabled={isLoading || isSending || isControllingConsultation || !consultationContext.analysis_ready}>完成问诊</button>
+                  <button type="button" onClick={() => void onCancel()} disabled={isLoading || isSending || isControllingConsultation}>取消问诊</button>
+                </div>
+              ) : null}
               <button type="submit" className="message-send-button" disabled={isLoading || isSending} aria-label="发送消息">
                 <MaterialIcon name="send" />
                 {isSending ? '发送中' : '发送'}
@@ -170,6 +235,10 @@ export function ConsultationChatPanel({
       )}
     </section>
   )
+}
+
+function statusLabel(status: ConsultationContext['status']) {
+  return { IN_PROGRESS: '问诊中', PAUSED: '问诊已暂停', COMPLETED: '问诊已完成', CANCELLED: '问诊已取消' }[status]
 }
 
 function CollaborationProcess({

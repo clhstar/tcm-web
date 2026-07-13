@@ -1,0 +1,239 @@
+@media (max-width: 1120px) {
+  .dashboard-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-sidebar {
+    display: none;
+  }
+
+  .sidebar-boundary {
+    display: none;
+  }
+
+  .dashboard-main {
+    padding: 16px 16px 86px;
+  }
+
+  .workspace-grid.with-context {
+    grid-template-columns: 1fr;
+  }
+
+  .patient-context-panel {
+    position: static;
+  }
+
+  .mobile-nav {
+    position: fixed;
+    left: 14px;
+    right: 14px;
+    bottom: 12px;
+    z-index: 30;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border: 1px solid var(--app-border);
+    border-radius: 8px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: var(--app-shadow);
+    backdrop-filter: blur(18px);
+  }
+
+  .mobile-nav-item {
+    justify-content: center;
+    gap: 5px;
+    min-height: 48px;
+    border-radius: 8px;
+    color: var(--app-text-muted);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .mobile-nav-item.active {
+    color: var(--app-accent);
+    background: var(--app-accent-soft);
+  }
+}
+
+@media (max-width: 880px) {
+  .auth-page {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-intro {
+    padding: 34px 22px;
+    border-right: 0;
+    border-bottom: 1px solid var(--app-border);
+  }
+
+  .auth-intro h1 {
+    font-size: 42px;
+  }
+
+  .auth-intro p {
+    font-size: 16px;
+  }
+
+  .auth-panel {
+    align-self: start;
+    margin: 24px 0 42px;
+    padding: 26px;
+  }
+
+  .dashboard-topbar {
+    display: grid;
+    padding-right: 0;
+  }
+
+  .topbar-actions {
+    width: 100%;
+    flex: none;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .topbar-search {
+    min-width: 0;
+  }
+
+  .workspace-surface,
+  .workspace-grid,
+  .utility-page {
+    min-height: auto;
+    height: auto;
+  }
+
+  .workspace-grid.with-context {
+    align-items: start;
+  }
+
+  .chat-shell-panel,
+  .chat-route {
+    height: auto;
+  }
+
+  .single-module-panel,
+  .patient-focus-panel,
+  .patient-context-panel,
+  .utility-page {
+    padding: 16px;
+  }
+
+  .consultation-card,
+  .patient-summary-card {
+    padding: 16px;
+  }
+
+  .message-input-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .archive-input-shell input,
+  .message-send-button {
+    grid-column: auto;
+  }
+
+  .form-grid,
+  .utility-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .consultation-history-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .history-chevron {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .dashboard-main {
+    padding-inline: 16px;
+  }
+
+  .patient-context-panel {
+    display: none;
+  }
+
+  .topbar-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar-user {
+    display: none;
+  }
+
+  .topbar-search span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .route-toolbar,
+  .consultation-panel-header,
+  .focus-actions,
+  .form-actions,
+  .pagination,
+  .starter-archive-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .context-metrics div,
+  .patient-details div,
+  .consultation-summary-grid div {
+    grid-template-columns: 1fr;
+  }
+
+  .context-metrics dd,
+  .patient-details dd,
+  .consultation-summary-grid dd {
+    text-align: left;
+  }
+
+  .search-line,
+  .archive-option-card {
+    grid-template-columns: 1fr;
+  }
+
+  .patient-list-header {
+    display: none;
+  }
+
+  .patient-list-meta span {
+    display: none;
+  }
+
+  .patient-row {
+    grid-template-columns: minmax(0, 1fr) auto 18px;
+    gap: 8px;
+  }
+
+  .patient-phone {
+    font-size: 12px;
+  }
+
+  .consultation-inline-error {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .consultation-inline-error .ghost-button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .message-bubble,
+  .thinking-process-block,
+  .collaboration-process-block {
+    max-width: 100%;
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assistant-typing-indicator span {
+    animation: none;
+  }
+}

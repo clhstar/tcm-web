@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { Patient } from '../../api/patient'
+import { NotificationProvider } from '../../components/Notification'
 import { PatientForm } from './PatientForm'
 
 const patient: Patient = {
@@ -68,7 +69,9 @@ describe('PatientForm', () => {
     const user = userEvent.setup()
 
     render(
-      <PatientForm submitLabel="保存患者" onCancel={onCancel} onSubmit={onSubmit} />,
+      <NotificationProvider>
+        <PatientForm submitLabel="保存患者" onCancel={onCancel} onSubmit={onSubmit} />
+      </NotificationProvider>,
     )
 
     expect(screen.getByLabelText('姓名')).toHaveValue('')
@@ -82,7 +85,7 @@ describe('PatientForm', () => {
 
     const error = await screen.findByRole('alert')
     expect(error).toHaveTextContent('手机号已存在')
-    expect(error).toHaveClass('form-error')
+    expect(error).toHaveClass('app-notification', 'error')
     await waitFor(() =>
       expect(screen.getByRole('button', { name: '保存患者' })).not.toBeDisabled(),
     )

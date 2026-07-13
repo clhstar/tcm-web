@@ -3,21 +3,23 @@ import type { Consultation } from '../../api/consultation'
 
 type ConsultationSummaryPanelProps = {
   consultation: Consultation | null
-  isSummarizing: boolean
   isCompleting: boolean
   isLoading: boolean
-  onGenerateSummary: () => Promise<void>
   onComplete: () => Promise<void>
 }
 
 export function ConsultationSummaryPanel({
   consultation,
-  isSummarizing,
   isCompleting,
   isLoading,
-  onGenerateSummary,
   onComplete,
 }: ConsultationSummaryPanelProps) {
+  const context = consultation?.consultationContext ?? null
+  const canComplete = Boolean(
+    context?.analysis_ready &&
+    (context.status === 'IN_PROGRESS' || context.status === 'PAUSED'),
+  )
+
   return (
     <section className="consultation-card consultation-summary-panel" aria-label="问诊总结">
       <div className="consultation-panel-header">
@@ -31,40 +33,32 @@ export function ConsultationSummaryPanel({
         <>
           <dl className="consultation-summary-grid">
             <div>
-              <dt>主诉</dt>
-              <dd>{consultation.chiefComplaint || '未记录'}</dd>
+              <dt>对话主题</dt>
+              <dd>{consultation.chiefComplaint || '新对话'}</dd>
             </div>
             <div>
-              <dt>症状总结</dt>
-              <dd>{consultation.symptomSummary || '还没有生成总结'}</dd>
+              <dt>问诊状态</dt>
+              <dd>{consultation.statusName || '普通对话'}</dd>
             </div>
             <div>
-              <dt>可能证型</dt>
-              <dd>{consultation.possibleSyndrome || '待生成'}</dd>
+              <dt>安全分析</dt>
+              <dd>{context?.analysis_ready ? '已由 tcm-flow 生成，可人工确认完成' : '尚未就绪，请继续补充信息'}</dd>
             </div>
             <div>
-              <dt>调理建议</dt>
-              <dd>{consultation.suggestion || '待生成'}</dd>
-            </div>
-            <div>
-              <dt>风险提示</dt>
-              <dd>{consultation.riskWarning || '待生成'}</dd>
+              <dt>说明</dt>
+              <dd>分析内容保存在问诊记录中，本页不再调用旧的 Java 总结接口。</dd>
             </div>
           </dl>
 
           <div className="focus-actions">
-            <button type="button" className="ghost-button" onClick={() => void onGenerateSummary()} disabled={isLoading || isSummarizing || isCompleting}>
-              <MaterialIcon name="summarize" />
-              {isSummarizing ? '生成中...' : '生成总结'}
-            </button>
             <button
               type="button"
               className="submit-button compact"
               onClick={() => void onComplete()}
-              disabled={isLoading || isSummarizing || isCompleting || consultation.status === 'COMPLETED'}
+              disabled={isLoading || isCompleting || !canComplete}
             >
               <MaterialIcon name="factCheck" />
-              {isCompleting ? '处理中...' : '完成问诊'}
+              {context?.status === 'COMPLETED' ? '问诊已完成' : isCompleting ? '处理中...' : '人工确认完成'}
             </button>
           </div>
         </>

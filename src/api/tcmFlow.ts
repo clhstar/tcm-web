@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { TCM_FLOW_BASE_URL } from '../config/global'
+import { requestJson } from '../shared/api/httpClient'
 
 const REQUEST_FALLBACK_MESSAGE = 'tcm-flow request failed, please make sure the service is running.'
 
@@ -45,35 +46,19 @@ type QueryTcmFlowInput = {
 
 export async function queryTcmFlow(input: QueryTcmFlowInput): Promise<TcmFlowRetrieval> {
   const normalizedQuery = input.query.trim()
-  const response = await fetch(`${TCM_FLOW_BASE_URL}/api/rag/query`, {
+  const payload = await requestJson('/api/rag/query', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
     body: JSON.stringify({
       query: normalizedQuery,
       top_k: input.topK ?? 5,
       mode: input.mode ?? 'hybrid',
     }),
+  }, {
+    authenticated: false,
+    baseUrl: TCM_FLOW_BASE_URL,
+    errorKeys: ['detail', 'message'],
+    fallbackMessage: REQUEST_FALLBACK_MESSAGE,
   })
-  const payload = await readJson(response)
-
-  if (!response.ok) {
-    throw new Error(readErrorMessage(payload))
-  }
 
   return tcmFlowResponseSchema.parse(payload)
-}
-
-async function readJson(response: Response): Promise<unknown> {
-  try {
-    return await response.json()
-  } catch {
-    return null
-  }
-}
-
-function readErrorMessage(payload: unknown) {
-  const parsed = z.object({ detail: z.string().optional(), message: z.string().optional() }).safeParse(payload)
-  return parsed.success ? parsed.data.detail ?? parsed.data.message ?? REQUEST_FALLBACK_MESSAGE : REQUEST_FALLBACK_MESSAGE
 }
