@@ -2,10 +2,16 @@ import { Fragment, type FormEvent, useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { MaterialIcon } from '../../components/MaterialIcon'
-import type { Consultation, ConsultationContext, ConsultationMessage } from '../../api/consultation'
+import type {
+  Consultation,
+  ConsultationContext,
+  ConsultationMessage,
+  ConsultationRunStatus,
+} from '../../api/consultation'
 import type { Patient } from '../../api/patient'
 import type { CollaborationStatus, CollaborationStep } from './collaboration'
 import type { TcmFlowEventsByMessageId, TcmFlowToolEvent } from './tcmFlowHistory'
+import { ConsultationFilesPanel } from './ConsultationFilesPanel'
 
 const TCM_FLOW_PENDING_MESSAGE = '正在连接 tcm-flow...'
 const COLLABORATION_STATUS_LABELS: Readonly<Record<CollaborationStatus, string>> = {
@@ -24,6 +30,10 @@ type ConsultationChatPanelProps = {
   errorMessage: string
   isLoading: boolean
   isSending: boolean
+  isRunActionPending: boolean
+  isRunBlocking: boolean
+  canControlRun: boolean
+  runStatus: ConsultationRunStatus | null
   tcmFlowEventsByMessageId: TcmFlowEventsByMessageId
   collaborationByMessageId: Record<number, CollaborationStep[]>
   taggedPatient: Patient | null
@@ -36,9 +46,12 @@ type ConsultationChatPanelProps = {
   onAddSuggestedTag: () => void
   onComplete: () => Promise<void>
   onCancel: () => Promise<void>
+  onCancelRun: () => Promise<void>
   onOpenPatientProfile: () => void
   canOpenPatientProfile: boolean
   onRetryHistory: () => void
+  onResumeRun: () => Promise<void>
+  onRetryRun: () => Promise<void>
   onSend: () => Promise<void>
 }
 
@@ -50,6 +63,10 @@ export function ConsultationChatPanel({
   errorMessage,
   isLoading,
   isSending,
+  isRunActionPending,
+  isRunBlocking,
+  canControlRun,
+  runStatus,
   tcmFlowEventsByMessageId,
   collaborationByMessageId,
   taggedPatient,
@@ -62,9 +79,12 @@ export function ConsultationChatPanel({
   onAddSuggestedTag,
   onComplete,
   onCancel,
+  onCancelRun,
   onOpenPatientProfile,
   canOpenPatientProfile,
   onRetryHistory,
+  onResumeRun,
+  onRetryRun,
   onSend,
 }: ConsultationChatPanelProps) {
   const [expandedThinkingMessageId, setExpandedThinkingMessageId] = useState<number | null>(null)
@@ -172,6 +192,12 @@ export function ConsultationChatPanel({
             </div>
           </div>
 
+          <ConsultationFilesPanel
+            consultationId={consultation.id}
+            disabled={isLoading || isRunBlocking}
+            refreshKey={`${consultation.id}:${isSending ? 'running' : 'idle'}`}
+          />
+
           <form className="consultation-message-form" onSubmit={handleSubmit}>
             <label htmlFor="consultation-message-input">发送消息</label>
             {consultationContext ? (
@@ -180,6 +206,15 @@ export function ConsultationChatPanel({
                 <span>{consultationContext.status === 'PAUSED' ? '普通对话仍可继续；重新添加同患者标签可恢复问诊。' : consultationContext.analysis_ready ? '分析已就绪，请人工确认完成或取消。' : '问诊状态已同步。'}</span>
               </div>
             ) : null}
+            <RunGovernanceControl
+              isSending={isSending}
+              isActionPending={isRunActionPending}
+              canControl={canControlRun}
+              status={runStatus}
+              onCancel={onCancelRun}
+              onResume={onResumeRun}
+              onRetry={onRetryRun}
+            />
             {showTagSuggestion && !taggedPatient && !isTerminalConsultation ? (
               <div className="consultation-tag-suggestion" role="status">
                 <span>这条对话可能适合进入问诊，仅在你确认后添加标签。</span>
@@ -192,7 +227,7 @@ export function ConsultationChatPanel({
                 value={draft}
                 onChange={(event) => onDraftChange(event.target.value)}
                 placeholder={taggedPatient ? '请输入本轮问诊补充信息' : '发送普通消息'}
-                disabled={isLoading || isSending}
+                disabled={isLoading || isRunBlocking}
               />
               <div className="message-archive-row">
                 {isTerminalConsultation ? (
@@ -202,10 +237,10 @@ export function ConsultationChatPanel({
                 ) : taggedPatient ? (
                   <span className="archive-consult-chip consultation-tag-chip">
                     <MaterialIcon name="medicalServices" />问诊·{taggedPatient.name}
-                    <button type="button" aria-label="删除问诊标签并暂停问诊" onClick={() => void onRemoveTag()} disabled={isLoading || isSending || isControllingConsultation}>×</button>
+                    <button type="button" aria-label="删除问诊标签并暂停问诊" onClick={() => void onRemoveTag()} disabled={isLoading || isRunBlocking || isControllingConsultation}>×</button>
                   </span>
                 ) : (
-                  <button type="button" className="archive-consult-chip" title={archiveLabel} onClick={onOpenArchiveSheet} disabled={isLoading || isSending}>
+                  <button type="button" className="archive-consult-chip" title={archiveLabel} onClick={onOpenArchiveSheet} disabled={isLoading || isRunBlocking}>
                     <MaterialIcon name="add" />添加问诊标签
                   </button>
                 )}
@@ -216,13 +251,13 @@ export function ConsultationChatPanel({
               </div>
               {consultationContext && (consultationContext.status === 'IN_PROGRESS' || consultationContext.status === 'PAUSED') ? (
                 <div className="consultation-control-row">
-                  <button type="button" onClick={() => void onComplete()} disabled={isLoading || isSending || isControllingConsultation || !consultationContext.analysis_ready}>完成问诊</button>
-                  <button type="button" onClick={() => void onCancel()} disabled={isLoading || isSending || isControllingConsultation}>取消问诊</button>
+                  <button type="button" onClick={() => void onComplete()} disabled={isLoading || isRunBlocking || isControllingConsultation || !consultationContext.analysis_ready}>完成问诊</button>
+                  <button type="button" onClick={() => void onCancel()} disabled={isLoading || isRunBlocking || isControllingConsultation}>取消问诊</button>
                 </div>
               ) : null}
-              <button type="submit" className="message-send-button" disabled={isLoading || isSending} aria-label="发送消息">
+              <button type="submit" className="message-send-button" disabled={isLoading || isRunBlocking} aria-label="发送消息">
                 <MaterialIcon name="send" />
-                {isSending ? '发送中' : '发送'}
+                {isSending ? '处理中' : '发送'}
               </button>
             </div>
           </form>
@@ -235,6 +270,79 @@ export function ConsultationChatPanel({
       )}
     </section>
   )
+}
+
+function RunGovernanceControl({
+  isSending,
+  isActionPending,
+  canControl,
+  status,
+  onCancel,
+  onResume,
+  onRetry,
+}: {
+  isSending: boolean
+  isActionPending: boolean
+  canControl: boolean
+  status: ConsultationRunStatus | null
+  onCancel: () => Promise<void>
+  onResume: () => Promise<void>
+  onRetry: () => Promise<void>
+}) {
+  const visible = isSending || status?.status === 'interrupted' || status?.status === 'error'
+  if (!visible) return null
+
+  const label = runGovernanceLabel(status, isSending)
+  const detail = status && status.max_attempts > 0
+    ? `第 ${status.attempt}/${status.max_attempts} 次执行`
+    : null
+  const canStop = canControl && isSending && status?.status !== 'cancelling'
+  const canAbandonInterrupted = status?.status === 'interrupted'
+
+  return (
+    <div className={`run-governance-status run-governance-${status?.status ?? 'running'}`} role="status">
+      <div>
+        <MaterialIcon name={status?.status === 'error' ? 'error' : 'history'} />
+        <span>
+          <strong>{label}</strong>
+          {detail ? <small>{detail}</small> : null}
+        </span>
+      </div>
+      <div className="run-governance-actions">
+        {canStop || canAbandonInterrupted ? (
+          <button type="button" onClick={() => void onCancel()} disabled={isActionPending}>
+            {canAbandonInterrupted ? '放弃任务' : '停止生成'}
+          </button>
+        ) : null}
+        {status?.status === 'interrupted' && status.resumable ? (
+          <button type="button" className="primary" onClick={() => void onResume()} disabled={isActionPending}>
+            继续任务
+          </button>
+        ) : null}
+        {status?.status === 'error' && status.retryable ? (
+          <button type="button" className="primary" onClick={() => void onRetry()} disabled={isActionPending}>
+            重试
+          </button>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+function runGovernanceLabel(status: ConsultationRunStatus | null, isSending: boolean) {
+  switch (status?.status) {
+    case 'cancelling':
+      return '正在安全停止本次任务…'
+    case 'interrupted':
+      return status.resumable ? '任务已中断，可从检查点继续' : '任务已中断，恢复次数已用尽'
+    case 'error':
+      return status.retryable ? '本次任务执行失败，可重试' : '本次任务执行失败，重试次数已用尽'
+    case 'pending':
+    case 'running':
+      return '长任务正在后台执行'
+    default:
+      return isSending ? '长任务正在后台执行' : '运行状态已更新'
+  }
 }
 
 function statusLabel(status: ConsultationContext['status']) {

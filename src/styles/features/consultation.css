@@ -599,7 +599,136 @@
 .consultation-control-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .consultation-control-row button:last-child { color: #9b342d; }
 
+.run-governance-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid #c8d8f0;
+  border-radius: 0.75rem;
+  background: #f3f7fd;
+  color: #294e7a;
+  font-size: 0.875rem;
+}
+
+.run-governance-status > div,
+.run-governance-status > div > span {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.run-governance-status > div > span {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.run-governance-status small {
+  color: inherit;
+  opacity: 0.72;
+}
+
+.run-governance-interrupted { border-color: #e6c875; background: #fff9e8; color: #765a14; }
+.run-governance-error { border-color: #e7b8b3; background: #fff4f2; color: #903c34; }
+.run-governance-cancelling { border-color: #d7d9dc; background: #f5f6f7; color: #5d6662; }
+
+.run-governance-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.run-governance-actions button {
+  border: 1px solid currentColor;
+  border-radius: 0.55rem;
+  padding: 0.42rem 0.68rem;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 750;
+}
+
+.run-governance-actions button.primary {
+  border-color: var(--app-accent);
+  color: #fff;
+  background: var(--app-accent);
+}
+
+.run-governance-actions button:disabled { cursor: wait; opacity: 0.55; }
+
+.consultation-files {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0 1rem;
+  padding: 0.8rem;
+  border: 1px solid var(--app-border-soft);
+  border-radius: 0.8rem;
+  background: #fbfdfc;
+}
+
+.consultation-files-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.consultation-files-header > div,
+.consultation-file-name {
+  min-width: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.consultation-files-header small,
+.consultation-file-name small,
+.consultation-files-empty {
+  color: var(--app-text-muted);
+  font-size: 0.78rem;
+}
+
+.consultation-file-input { display: none; }
+
+.consultation-file-list {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.consultation-file-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--app-border-soft);
+}
+
+.consultation-file-kind {
+  border-radius: 999px;
+  padding: 0.2rem 0.45rem;
+  color: #365c4d;
+  background: #e7f3ed;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.consultation-file-kind.artifact { color: #674d18; background: #fff1c9; }
+.consultation-file-name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.consultation-file-list button { border: 0; color: var(--app-accent); background: transparent; cursor: pointer; }
+.consultation-file-list button.danger { color: #9b342d; }
+.consultation-file-list button:disabled { cursor: wait; opacity: 0.55; }
+.consultation-files-error { margin: 0; color: #9b342d; font-size: 0.82rem; }
+.consultation-files-empty { margin: 0; }
+
 @media (max-width: 640px) {
   .consultation-status-banner,
-  .consultation-tag-suggestion { align-items: flex-start; flex-direction: column; }
+  .consultation-tag-suggestion,
+  .run-governance-status { align-items: flex-start; flex-direction: column; }
+  .consultation-files-header { align-items: flex-start; }
+  .consultation-file-list li { grid-template-columns: auto minmax(0, 1fr); }
+  .consultation-file-list li button { justify-self: start; }
 }

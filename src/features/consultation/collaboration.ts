@@ -1,4 +1,5 @@
 import type { TcmFlowSseEvent } from '../../api/consultation'
+import { isRecord, readRootStreamPayload } from '../../api/langGraphStream'
 
 export type CollaborationStatus = 'pending' | 'running' | 'completed' | 'skipped' | 'failed'
 
@@ -77,7 +78,7 @@ export function applyCollaborationSseEvent(
   event: TcmFlowSseEvent,
 ): CollaborationStep[] {
   let next = cloneSteps(current)
-  const payload = readRootPayload(event.data)
+  const payload = readRootStreamPayload(event.data)
   if (!isRecord(payload)) {
     return next
   }
@@ -208,20 +209,6 @@ function isCollaborationAgent(value: unknown): value is CollaborationAgent {
   return typeof value === 'string' && COLLABORATION_AGENTS.has(value as CollaborationAgent)
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
 function hasOwn(value: object, key: PropertyKey): boolean {
   return Object.hasOwn(value, key)
-}
-
-function readRootPayload(value: unknown): unknown | null {
-  if (!isRecord(value) || !hasOwn(value, 'namespace')) {
-    return value
-  }
-  if (!Array.isArray(value.namespace) || value.namespace.length > 0 || !hasOwn(value, 'data')) {
-    return null
-  }
-  return value.data
 }

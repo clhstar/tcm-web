@@ -1,6 +1,27 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { TOKEN_STORAGE_KEY } from './auth'
-import { listConsultationMessages, streamConsultationRun } from './consultation'
+import {
+  cancelConsultationRun,
+  getCurrentConsultationRun,
+  deleteConsultationFile,
+  downloadConsultationFile,
+  listConsultationFiles,
+  listConsultationMessages,
+  resumeConsultationRun,
+  retryConsultationRun,
+  streamConsultationRun,
+  uploadConsultationFile,
+} from './consultation'
+
+type TestRunStatus =
+  | 'pending'
+  | 'running'
+  | 'cancelling'
+  | 'interrupted'
+  | 'waiting_clarification'
+  | 'success'
+  | 'error'
+  | 'cancelled'
 
 function jsonResponse(body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -46,21 +67,30 @@ function interruptedSseResponse(events: Array<{ event: string; data: unknown }>)
 }
 
 function runStatusResponse(
-  status: 'pending' | 'running' | 'waiting_clarification' | 'success' | 'error' | 'cancelled',
+  status: TestRunStatus,
   error: string | null = null,
 ) {
   return jsonResponse({
     code: 0,
     message: 'success',
-    data: { run_id: 'run-1', thread_id: 'thread-101', status, error },
+    data: runStatusData(status, error),
   })
 }
 
 function runStatusData(
-  status: 'pending' | 'running' | 'waiting_clarification' | 'success' | 'error' | 'cancelled',
+  status: TestRunStatus,
   error: string | null = null,
 ) {
-  return { run_id: 'run-1', thread_id: 'thread-101', status, error }
+  return {
+    run_id: 'run-1',
+    thread_id: 'thread-101',
+    status,
+    error,
+    attempt: 0,
+    max_attempts: 0,
+    resumable: false,
+    retryable: false,
+  }
 }
 
 describe('consultation history API', () => {
@@ -148,6 +178,76 @@ describe('consultation history API', () => {
 
     await expect(listConsultationMessages(101)).rejects.toThrow(
       'tcm-flow history message requires type or role',
+    )
+  })
+})
+
+describe('consultation file API', () => {
+  afterEach(() => {
+    localStorage.clear()
+    vi.unstubAllGlobals()
+  })
+
+  it('uploads multipart without forcing a JSON content type and lists files', async () => {
+    localStorage.setItem(TOKEN_STORAGE_KEY, 'token-123')
+    const file = {
+      fileId: 'file-1',
+      kind: 'upload',
+      name: 'notes.txt',
+      path: 'uploads/a-notes.txt',
+      sizeBytes: 5,
+      contentType: 'text/plain',
+      sha256: 'abc',
+      createdAt: '2026-07-15T00:00:00Z',
+      updatedAt: '2026-07-15T00:00:00Z',
+    }
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ code: 0, message: 'ok', data: file }))
+      .mockResolvedValueOnce(jsonResponse({ code: 0, message: 'ok', data: [file] }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      uploadConsultationFile(101, new File(['hello'], 'notes.txt', { type: 'text/plain' })),
+    ).resolves.toEqual(file)
+    await expect(listConsultationFiles(101)).resolves.toEqual([file])
+
+    const uploadInit = fetchMock.mock.calls[0][1] as RequestInit
+    expect(uploadInit.body).toBeInstanceOf(FormData)
+    expect(uploadInit.headers).toEqual({ Authorization: 'Bearer token-123' })
+    expect(fetchMock.mock.calls[0][0]).toBe('http://localhost:4040/api/conversations/101/files')
+  })
+
+  it('downloads with the server filename and deletes through the owned conversation route', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('report', {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/markdown',
+          'Content-Disposition': "attachment; filename*=UTF-8''report%20final.md",
+        },
+      }))
+      .mockResolvedValueOnce(jsonResponse({ code: 0, message: 'deleted', data: null }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const download = await downloadConsultationFile(101, 'file/1')
+    expect(download.filename).toBe('report final.md')
+    expect(await download.blob.text()).toBe('report')
+    await expect(deleteConsultationFile(101, 'file/1')).resolves.toBeUndefined()
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'http://localhost:4040/api/conversations/101/files/file%2F1',
+    )
+    expect(fetchMock.mock.calls[1][1]).toEqual(expect.objectContaining({ method: 'DELETE' }))
+  })
+
+  it('leaves the filename empty when Content-Disposition is not browser-visible', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(new Response('report', {
+      status: 200,
+      headers: { 'Content-Type': 'application/octet-stream' },
+    })))
+
+    await expect(downloadConsultationFile(101, 'file-1')).resolves.toEqual(
+      expect.objectContaining({ filename: '' }),
     )
   })
 })
@@ -564,7 +664,7 @@ describe('consultation stream API', () => {
     )
   })
 
-  it('throws the safe incomplete error after a thrown stream and three non-terminal statuses', async () => {
+  it('returns the latest running status after a thrown stream so the caller can keep recovering', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
@@ -583,11 +683,15 @@ describe('consultation stream API', () => {
         message: 'recent headache',
         onEvent: vi.fn(),
       }),
-    ).rejects.toThrow('Consultation stream ended before completion.')
+    ).resolves.toEqual({
+      runId: 'run-1',
+      runStatus: runStatusData('running'),
+      transportEnded: false,
+    })
     expect(fetchMock).toHaveBeenCalledTimes(4)
   })
 
-  it('throws an explicit incomplete-stream error after EOF and three non-terminal statuses', async () => {
+  it('returns the latest running status after EOF so the caller can keep recovering', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
@@ -604,7 +708,11 @@ describe('consultation stream API', () => {
         message: 'recent headache',
         onEvent: vi.fn(),
       }),
-    ).rejects.toThrow('Consultation stream ended before completion.')
+    ).resolves.toEqual({
+      runId: 'run-1',
+      runStatus: runStatusData('running'),
+      transportEnded: false,
+    })
     expect(fetchMock).toHaveBeenCalledTimes(4)
   })
 
@@ -700,7 +808,7 @@ describe('consultation stream API', () => {
   it.each([
     ['error', 'database password=super-secret'],
     ['cancelled', 'private cancellation detail'],
-  ] as const)('hides the run status error for %s', async (status, privateMessage) => {
+  ] as const)('returns governed %s status without exposing its private error', async (status, privateMessage) => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
@@ -714,8 +822,12 @@ describe('consultation stream API', () => {
       message: 'recent headache',
       onEvent: vi.fn(),
     })
-    await expect(request).rejects.toThrow('Request failed, please try again later.')
-    await expect(request).rejects.not.toThrow(privateMessage)
+    await expect(request).resolves.toEqual({
+      runId: 'run-1',
+      runStatus: runStatusData(status),
+      transportEnded: false,
+    })
+    expect(privateMessage).not.toBe('')
   })
 
   it('keeps an error event failed but hides its raw content when end follows it', async () => {
@@ -736,5 +848,57 @@ describe('consultation stream API', () => {
         onEvent: vi.fn(),
       }),
     ).rejects.toThrow('Request failed, please try again later.')
+  })
+})
+
+describe('consultation run governance API', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('returns null when the conversation has no current run', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(errorJsonResponse(404, 'not found')))
+
+    await expect(getCurrentConsultationRun(101)).resolves.toBeNull()
+  })
+
+  it('reads an interrupted current run with resume metadata and sanitizes errors', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          code: 0,
+          message: 'success',
+          data: {
+            ...runStatusData('interrupted', 'private worker detail'),
+            attempt: 1,
+            max_attempts: 3,
+            resumable: true,
+          },
+        }),
+      ),
+    )
+
+    await expect(getCurrentConsultationRun(101)).resolves.toEqual({
+      ...runStatusData('interrupted'),
+      attempt: 1,
+      max_attempts: 3,
+      resumable: true,
+    })
+  })
+
+  it.each([
+    ['cancel', cancelConsultationRun, 'cancelling'],
+    ['resume', resumeConsultationRun, 'running'],
+    ['retry', retryConsultationRun, 'running'],
+  ] as const)('posts the %s action through the conversation boundary', async (action, control, status) => {
+    const fetchMock = vi.fn().mockResolvedValue(runStatusResponse(status))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(control(101, 'run-1')).resolves.toEqual(runStatusData(status))
+    expect(fetchMock).toHaveBeenCalledWith(
+      `http://localhost:4040/api/conversations/101/runs/run-1/${action}`,
+      expect.objectContaining({ method: 'POST' }),
+    )
   })
 })

@@ -12,6 +12,9 @@ export type ConsultationStreamLifecycle =
   | 'connecting'
   | 'streaming'
   | 'reconciling'
+  | 'recovering'
+  | 'cancelling'
+  | 'interrupted'
   | 'completed'
   | 'error'
   | 'cancelled'
@@ -141,7 +144,11 @@ export function consultationStreamReducer(
 }
 
 export function isConsultationStreamActive(lifecycle: ConsultationStreamLifecycle) {
-  return lifecycle === 'connecting' || lifecycle === 'streaming' || lifecycle === 'reconciling'
+  return lifecycle === 'connecting' ||
+    lifecycle === 'streaming' ||
+    lifecycle === 'reconciling' ||
+    lifecycle === 'recovering' ||
+    lifecycle === 'cancelling'
 }
 
 function replaceAssistantMessage(

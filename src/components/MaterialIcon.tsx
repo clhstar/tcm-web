@@ -2,6 +2,7 @@ import accountCircleIcon from '@material-design-icons/svg/outlined/account_circl
 import addIcon from '@material-design-icons/svg/outlined/add.svg?raw'
 import arrowBackIcon from '@material-design-icons/svg/outlined/arrow_back.svg?raw'
 import assignmentIcon from '@material-design-icons/svg/outlined/assignment.svg?raw'
+import attachFileIcon from '@material-design-icons/svg/outlined/attach_file.svg?raw'
 import calendarMonthIcon from '@material-design-icons/svg/outlined/calendar_month.svg?raw'
 import chatIcon from '@material-design-icons/svg/outlined/chat.svg?raw'
 import chevronRightIcon from '@material-design-icons/svg/outlined/chevron_right.svg?raw'
@@ -36,6 +37,7 @@ const iconSources = {
   add: addIcon,
   arrowBack: arrowBackIcon,
   assignment: assignmentIcon,
+  attachFile: attachFileIcon,
   calendarMonth: calendarMonthIcon,
   chat: chatIcon,
   chevronRight: chevronRightIcon,

@@ -39,10 +39,14 @@ export async function fetchApiResponse(
   options: ApiRequestOptions = {},
 ) {
   const authenticated = options.authenticated ?? true
+  const headers = createJsonHeaders(init.headers, authenticated)
+  if (typeof FormData !== 'undefined' && init.body instanceof FormData) {
+    delete headers['Content-Type']
+  }
   const response = await fetch(`${options.baseUrl ?? API_BASE_URL}${path}`, {
     ...init,
     method: init.method ?? 'GET',
-    headers: createJsonHeaders(init.headers, authenticated),
+    headers,
   })
 
   if (authenticated && response.status === 401 && typeof window !== 'undefined') {

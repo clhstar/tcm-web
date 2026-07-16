@@ -1,4 +1,5 @@
 import type { TcmFlowSseEvent } from '../../api/consultation'
+import { isRecord, readRootStreamPayload } from '../../api/langGraphStream'
 import type { TcmFlowToolEvent } from './tcmFlowHistory'
 
 export type PublicResponse = {
@@ -23,7 +24,7 @@ export function readPublicResponse(event: TcmFlowSseEvent): PublicResponse | nul
     return null
   }
 
-  const payload = readRootPayload(event.data)
+  const payload = readRootStreamPayload(event.data)
   if (!isRecord(payload)) {
     return null
   }
@@ -158,21 +159,11 @@ function readSerializedMessage(event: TcmFlowSseEvent): SerializedMessage | null
   if (event.event !== 'messages') {
     return null
   }
-  const payload = readRootPayload(event.data)
+  const payload = readRootStreamPayload(event.data)
   if (!Array.isArray(payload) || payload.length < 2 || !isRecord(payload[0]) || !isRecord(payload[1])) {
     return null
   }
   return { message: payload[0], metadata: payload[1] }
-}
-
-function readRootPayload(value: unknown): unknown | null {
-  if (!isRecord(value) || !hasOwn(value, 'namespace')) {
-    return value
-  }
-  if (!Array.isArray(value.namespace) || value.namespace.length > 0 || !hasOwn(value, 'data')) {
-    return null
-  }
-  return value.data
 }
 
 function isNoStream(metadata: Record<string, unknown>): boolean {
@@ -247,12 +238,4 @@ function stableToolName(value: unknown): string | null {
 
 function stableIdentifier(value: unknown): string | null {
   return typeof value === 'string' && /^[A-Za-z0-9_.:-]{1,128}$/.test(value) ? value : null
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function hasOwn(value: object, key: PropertyKey): boolean {
-  return Object.hasOwn(value, key)
 }

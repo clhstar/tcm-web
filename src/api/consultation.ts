@@ -6,6 +6,7 @@ import {
   requestJson,
 } from '../shared/api/httpClient'
 import { readSseStream, type SseEvent } from './sse'
+import { isRecord, readRootStreamPayload } from './langGraphStream'
 
 const REQUEST_FALLBACK_MESSAGE = 'Request failed, please try again later.'
 const INCOMPLETE_STREAM_MESSAGE = 'Consultation stream ended before completion.'
@@ -86,21 +87,58 @@ const consultationMessagesResponseSchema = z.object({
 const runStatusSchema = z.object({
   run_id: z.string(),
   thread_id: z.string(),
+  assistant_id: z.string().nullable().optional(),
   status: z.enum([
     'pending',
     'running',
+    'cancelling',
+    'interrupted',
     'waiting_clarification',
     'success',
     'error',
     'cancelled',
   ]),
   error: z.string().nullable(),
+  attempt: z.number().int().nonnegative().default(0),
+  max_attempts: z.number().int().nonnegative().default(0),
+  resumable: z.boolean().default(false),
+  retryable: z.boolean().default(false),
+  recovery_reason: z.string().nullable().optional(),
+  created_at: z.string().nullable().optional(),
+  updated_at: z.string().nullable().optional(),
+  started_at: z.string().nullable().optional(),
+  finished_at: z.string().nullable().optional(),
+  cancel_requested_at: z.string().nullable().optional(),
 })
 
 const runStatusResponseSchema = z.object({
   code: z.number(),
   message: z.string(),
   data: runStatusSchema,
+})
+
+const conversationFileSchema = z.object({
+  fileId: z.string(),
+  kind: z.enum(['upload', 'artifact', 'workspace']),
+  name: z.string(),
+  path: z.string(),
+  sizeBytes: z.number().int().nonnegative(),
+  contentType: z.string(),
+  sha256: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+const conversationFileResponseSchema = z.object({
+  code: z.number(),
+  message: z.string(),
+  data: conversationFileSchema,
+})
+
+const conversationFilesResponseSchema = z.object({
+  code: z.number(),
+  message: z.string(),
+  data: z.array(conversationFileSchema),
 })
 
 const consultationPageResponseSchema = z.object({
@@ -121,12 +159,11 @@ export type ConsultationMessage = {
 export type TcmFlowMessage = z.infer<typeof tcmFlowMessageSchema>
 export type ConsultationPage = z.infer<typeof consultationPageSchema>
 export type ConsultationRunStatus = z.infer<typeof runStatusSchema>
-export type TerminalConsultationRunStatus = Omit<ConsultationRunStatus, 'status'> & {
-  status: 'success' | 'waiting_clarification'
-}
+export type ConversationFile = z.infer<typeof conversationFileSchema>
+export type ConversationFileDownload = { blob: Blob; filename: string }
 export type StreamConsultationRunResult = {
   runId: string
-  runStatus: TerminalConsultationRunStatus | null
+  runStatus: ConsultationRunStatus | null
   transportEnded: boolean
 }
 export type TcmFlowSseEvent = SseEvent
@@ -189,6 +226,56 @@ export async function listConsultationMessages(id: number): Promise<TcmFlowMessa
   return consultationMessagesResponseSchema.parse(payload).data
 }
 
+export async function uploadConsultationFile(
+  consultationId: number,
+  file: File,
+): Promise<ConversationFile> {
+  const body = new FormData()
+  body.append('file', file, file.name)
+  const payload = await requestConsultation(
+    `/api/conversations/${encodeURIComponent(String(consultationId))}/files`,
+    { method: 'POST', body },
+  )
+  return conversationFileResponseSchema.parse(payload).data
+}
+
+export async function listConsultationFiles(
+  consultationId: number,
+): Promise<ConversationFile[]> {
+  const payload = await requestConsultation(
+    `/api/conversations/${encodeURIComponent(String(consultationId))}/files`,
+  )
+  return conversationFilesResponseSchema.parse(payload).data
+}
+
+export async function downloadConsultationFile(
+  consultationId: number,
+  fileId: string,
+): Promise<ConversationFileDownload> {
+  const response = await fetchApiResponse(
+    `/api/conversations/${encodeURIComponent(String(consultationId))}/files/${encodeURIComponent(fileId)}`,
+  )
+  if (!response.ok) {
+    throw new Error(
+      readApiErrorMessage(await readJsonResponse(response), REQUEST_FALLBACK_MESSAGE),
+    )
+  }
+  return {
+    blob: await response.blob(),
+    filename: readDownloadFilename(response.headers.get('Content-Disposition')) ?? '',
+  }
+}
+
+export async function deleteConsultationFile(
+  consultationId: number,
+  fileId: string,
+): Promise<void> {
+  await requestConsultation(
+    `/api/conversations/${encodeURIComponent(String(consultationId))}/files/${encodeURIComponent(fileId)}`,
+    { method: 'DELETE' },
+  )
+}
+
 export async function streamConsultationRun(
   input: StreamConsultationRunInput,
 ): Promise<StreamConsultationRunResult> {
@@ -213,6 +300,7 @@ export async function streamConsultationRun(
 
   let runId: string | null = null
   let hasEnd = false
+  let endStatus: string | null = null
   let hasPublicResponse = false
   let streamFailure: Error | null = null
   let hasCallbackError = false
@@ -229,6 +317,7 @@ export async function streamConsultationRun(
       }
       if (event.event === 'end') {
         hasEnd = true
+        endStatus = readEndStatus(event.data)
       }
       if (hasMeaningfulPublicResponse(event)) {
         hasPublicResponse = true
@@ -248,18 +337,23 @@ export async function streamConsultationRun(
   if (hasCallbackError) {
     throw callbackError
   }
-  if (streamFailure) {
+  if (streamFailure && !runId) {
     throw streamFailure
   }
   if (!runId) {
     throw hasEnd ? new Error(INCOMPLETE_STREAM_MESSAGE) : (streamError ?? new Error(INCOMPLETE_STREAM_MESSAGE))
   }
-  if (hasEnd && hasPublicResponse) {
+  if (hasEnd && hasPublicResponse && isSuccessfulEndStatus(endStatus)) {
     return { runId, runStatus: null, transportEnded: true }
   }
 
-  const runStatus = await recoverRunStatus(input.consultationId, runId)
-  return { runId, runStatus, transportEnded: hasEnd }
+  try {
+    const runStatus = await recoverRunStatus(input.consultationId, runId)
+    return { runId, runStatus, transportEnded: hasEnd }
+  } catch (error) {
+    if (streamFailure) throw streamFailure
+    throw error
+  }
 }
 
 export async function completeConsultation(id: number): Promise<ConsultationContext> {
@@ -272,6 +366,51 @@ export async function pauseConversationConsultation(id: number): Promise<Consult
 
 export async function cancelConversationConsultation(id: number): Promise<ConsultationContext> {
   return controlConsultation(id, 'cancel')
+}
+
+export async function getCurrentConsultationRun(
+  consultationId: number,
+  signal?: AbortSignal,
+): Promise<ConsultationRunStatus | null> {
+  const response = await fetchApiResponse(
+    `/api/conversations/${encodeURIComponent(String(consultationId))}/runs/current`,
+    { method: 'GET', signal },
+  )
+  const payload = await readJsonResponse(response)
+  if (response.status === 404) return null
+  if (!response.ok) {
+    throw new Error(readApiErrorMessage(payload, REQUEST_FALLBACK_MESSAGE))
+  }
+  return parseRunStatusResponse(payload)
+}
+
+export async function getConsultationRunStatus(
+  consultationId: number,
+  runId: string,
+  signal?: AbortSignal,
+): Promise<ConsultationRunStatus> {
+  return requestRunStatus(consultationId, runId, signal)
+}
+
+export async function cancelConsultationRun(
+  consultationId: number,
+  runId: string,
+): Promise<ConsultationRunStatus> {
+  return controlConsultationRun(consultationId, runId, 'cancel')
+}
+
+export async function resumeConsultationRun(
+  consultationId: number,
+  runId: string,
+): Promise<ConsultationRunStatus> {
+  return controlConsultationRun(consultationId, runId, 'resume')
+}
+
+export async function retryConsultationRun(
+  consultationId: number,
+  runId: string,
+): Promise<ConsultationRunStatus> {
+  return controlConsultationRun(consultationId, runId, 'retry')
 }
 
 async function controlConsultation(id: number, action: 'pause' | 'complete' | 'cancel') {
@@ -290,8 +429,9 @@ async function requestConsultation(path: string, init: RequestInit = {}): Promis
 async function recoverRunStatus(
   consultationId: number,
   runId: string,
-): Promise<TerminalConsultationRunStatus> {
+): Promise<ConsultationRunStatus> {
   let lastStatusError: Error | null = null
+  let lastStatus: ConsultationRunStatus | null = null
 
   for (const delayMs of RUN_STATUS_DELAYS_MS) {
     if (delayMs > 0) {
@@ -305,12 +445,16 @@ async function recoverRunStatus(
       }
       lastStatusError = null
 
-      if (status.status === 'success' || status.status === 'waiting_clarification') {
-        return { ...status, status: status.status }
+      if (
+        status.status === 'success' ||
+        status.status === 'waiting_clarification' ||
+        status.status === 'error' ||
+        status.status === 'cancelled' ||
+        status.status === 'interrupted'
+      ) {
+        return status
       }
-      if (status.status === 'error' || status.status === 'cancelled') {
-        throw new Error(REQUEST_FALLBACK_MESSAGE)
-      }
+      lastStatus = status
     } catch (error) {
       if (error instanceof Error && !(error instanceof RunStatusRecoveryError)) {
         throw error
@@ -322,18 +466,21 @@ async function recoverRunStatus(
   if (lastStatusError) {
     throw lastStatusError
   }
+  if (lastStatus) return lastStatus
   throw new Error(INCOMPLETE_STREAM_MESSAGE)
 }
 
 async function requestRunStatus(
   consultationId: number,
   runId: string,
+  signal?: AbortSignal,
 ): Promise<ConsultationRunStatus> {
   try {
     const response = await fetchApiResponse(
       `/api/conversations/${encodeURIComponent(String(consultationId))}/runs/${encodeURIComponent(runId)}`,
       {
         method: 'GET',
+        signal,
       },
     )
     const payload = await readJsonResponse(response)
@@ -346,10 +493,30 @@ async function requestRunStatus(
     if (!parsed.success) {
       throw new RunStatusRecoveryError(REQUEST_FALLBACK_MESSAGE)
     }
-    return parsed.data.data
+    return sanitizeRunStatus(parsed.data.data)
   } catch (error) {
     throw normalizeStatusRecoveryError(error)
   }
+}
+
+async function controlConsultationRun(
+  consultationId: number,
+  runId: string,
+  action: 'cancel' | 'resume' | 'retry',
+) {
+  const payload = await requestConsultation(
+    `/api/conversations/${encodeURIComponent(String(consultationId))}/runs/${encodeURIComponent(runId)}/${action}`,
+    { method: 'POST' },
+  )
+  return parseRunStatusResponse(payload)
+}
+
+function parseRunStatusResponse(payload: unknown) {
+  return sanitizeRunStatus(runStatusResponseSchema.parse(payload).data)
+}
+
+function sanitizeRunStatus(status: ConsultationRunStatus): ConsultationRunStatus {
+  return { ...status, error: null }
 }
 
 class RunStatusRecoveryError extends Error {}
@@ -370,12 +537,21 @@ function readMetadataRunId(payload: unknown) {
   return parsed.success ? normalizeRunId(parsed.data.run_id) : null
 }
 
+function readEndStatus(payload: unknown) {
+  const parsed = z.object({ status: z.string() }).safeParse(payload)
+  return parsed.success ? parsed.data.status.trim().toLowerCase() : null
+}
+
+function isSuccessfulEndStatus(status: string | null) {
+  return status === null || status === 'done' || status === 'success' || status === 'waiting_clarification'
+}
+
 function hasMeaningfulPublicResponse(event: SseEvent) {
   if (event.event !== 'values' && event.event !== 'updates') {
     return false
   }
 
-  const payload = readRootPayload(event.data)
+  const payload = readRootStreamPayload(event.data)
   if (!isRecord(payload)) {
     return false
   }
@@ -398,26 +574,21 @@ function hasMeaningfulPublicResponse(event: SseEvent) {
   })
 }
 
-function readRootPayload(value: unknown) {
-  if (!isRecord(value) || !Object.hasOwn(value, 'namespace')) {
-    return value
-  }
-  if (
-    !Array.isArray(value.namespace) ||
-    value.namespace.length > 0 ||
-    !Object.hasOwn(value, 'data')
-  ) {
-    return null
-  }
-  return value.data
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
 function delay(milliseconds: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, milliseconds))
+}
+
+function readDownloadFilename(contentDisposition: string | null) {
+  if (!contentDisposition) return null
+  const encoded = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1]
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded)
+    } catch {
+      return encoded
+    }
+  }
+  return contentDisposition.match(/filename="?([^";]+)"?/i)?.[1] ?? null
 }
 
 export function consultationStatusLabel(status: string | null | undefined) {

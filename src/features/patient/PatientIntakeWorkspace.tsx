@@ -79,9 +79,17 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
     eventsByMessageId: tcmFlowEventsByMessageId,
     collaborationByMessageId,
     isSending: isSendingMessage,
+    isRunActionPending,
+    isRunBlocking,
+    runId,
+    runStatus,
     cancel: cancelConsultationStream,
+    cancelRun: cancelCurrentRun,
+    recover: recoverConsultationRun,
     reset: resetConsultationStream,
+    resumeRun: resumeCurrentRun,
     restoreHistory: restoreConsultationHistory,
+    retryRun: retryCurrentRun,
     send: sendConsultationMessage,
   } = useConsultationStream()
   const selectedPatientIdRef = useRef<number | null>(null)
@@ -278,6 +286,7 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
       applyWorkspaceState(restoreConversationState(consultation, patient))
       setConsultations((current) => upsertConsultation(current, consultation))
       restoreConsultationHistory(consultation.id, historyMessages)
+      startRunRecovery(consultation.id)
       setIsDraftingConsultation(false)
     } catch (loadError) {
       if (generation !== consultationLoadGenerationRef.current) return
@@ -308,6 +317,7 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
         return
       }
       restoreConsultationHistory(consultationId, historyMessages)
+      startRunRecovery(consultationId)
     } catch (loadError) {
       if (!isCurrentMessageLoad(generation, consultationId)) {
         return
@@ -463,6 +473,7 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
       activeConsultationIdRef.current !== activeConsultation.id ||
       consultationLoadingRef.current ||
       messageLoadingRef.current ||
+      isRunBlocking ||
       consultationMutationRef.current !== null
     ) {
       return
@@ -491,6 +502,36 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
     } catch {
       if (activeConsultationIdRef.current === activeConsultation.id) {
         showConsultationError(FALLBACK_CONSULTATION_ERROR)
+      }
+    }
+  }
+
+  async function handleCancelRun() {
+    try {
+      await cancelCurrentRun()
+    } catch (error) {
+      showConsultationError(error instanceof Error ? error.message : '停止任务失败，请稍后重试。')
+    }
+  }
+
+  async function handleResumeRun() {
+    try {
+      await resumeCurrentRun()
+    } catch (error) {
+      showConsultationError(error instanceof Error ? error.message : '恢复任务失败，请稍后重试。')
+      if (activeConsultationIdRef.current !== null) {
+        startRunRecovery(activeConsultationIdRef.current)
+      }
+    }
+  }
+
+  async function handleRetryRun() {
+    try {
+      await retryCurrentRun()
+    } catch (error) {
+      showConsultationError(error instanceof Error ? error.message : '重试任务失败，请稍后重试。')
+      if (activeConsultationIdRef.current !== null) {
+        startRunRecovery(activeConsultationIdRef.current)
       }
     }
   }
@@ -645,10 +686,29 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
           synchronizeConsultationContext(context, messageTag)
         },
         onSuggestedAction: () => setShowTagSuggestion(true),
+        onRunSettled: () => refreshConversationAfterRun(consultation.id),
       })
     } finally {
       releaseConsultationMutation(mutationOwner)
     }
+  }
+
+  function startRunRecovery(consultationId: number) {
+    void recoverConsultationRun({
+      consultationId,
+      onRunSettled: () => refreshConversationAfterRun(consultationId),
+    })
+  }
+
+  async function refreshConversationAfterRun(consultationId: number) {
+    const refreshed = await getConsultation(consultationId)
+    if (activeConsultationIdRef.current !== consultationId) return
+    const patient = await resolveConversationPatient(refreshed)
+    if (activeConsultationIdRef.current !== consultationId) return
+
+    setActiveConsultation(refreshed)
+    setConsultations((current) => upsertConsultation(current, refreshed))
+    applyWorkspaceState(restoreConversationState(refreshed, patient))
   }
 
 
@@ -693,6 +753,10 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
                   errorMessage={historyLoadError}
                   isLoading={isConsultationLoading || isMessageLoading || isCompleting}
                   isSending={isSendingMessage}
+                  isRunActionPending={isRunActionPending}
+                  isRunBlocking={isRunBlocking}
+                  canControlRun={runId !== null}
+                  runStatus={runStatus}
                   tcmFlowEventsByMessageId={tcmFlowEventsByMessageId}
                   collaborationByMessageId={collaborationByMessageId}
                   taggedPatient={taggedPatient}
@@ -705,6 +769,7 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
                   onAddSuggestedTag={() => selectedPatient && setTaggedPatient(selectedPatient)}
                   onComplete={handleCompleteConsultation}
                   onCancel={handleCancelConsultation}
+                  onCancelRun={handleCancelRun}
                   onOpenPatientProfile={() => selectedPatient && openPatientProfile(selectedPatient)}
                   canOpenPatientProfile={selectedPatient !== null}
                   onRetryHistory={() => {
@@ -712,6 +777,8 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
                       void loadMessages(activeConsultation.id)
                     }
                   }}
+                  onResumeRun={handleResumeRun}
+                  onRetryRun={handleRetryRun}
                   onSend={handleSendMessage}
                 />
               ) : null}
