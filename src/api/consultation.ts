@@ -11,6 +11,12 @@ import { isRecord, readRootStreamPayload } from './langGraphStream'
 const REQUEST_FALLBACK_MESSAGE = 'Request failed, please try again later.'
 const INCOMPLETE_STREAM_MESSAGE = 'Consultation stream ended before completion.'
 const RUN_STATUS_DELAYS_MS = [0, 50, 100] as const
+const CONSULTATION_STATUS_LABELS: Readonly<Record<string, string>> = {
+  IN_PROGRESS: '问诊中',
+  PAUSED: '已暂停',
+  COMPLETED: '已完成',
+  CANCELLED: '已取消',
+}
 
 const nullableString = z.string().nullable().optional()
 
@@ -168,6 +174,14 @@ export type StreamConsultationRunResult = {
 }
 export type TcmFlowSseEvent = SseEvent
 
+const TERMINAL_RUN_STATUSES = new Set<ConsultationRunStatus['status']>([
+  'success',
+  'waiting_clarification',
+  'error',
+  'cancelled',
+  'interrupted',
+])
+
 export type ConsultationCreateInput = {
   patientId?: number
   chiefComplaint: string
@@ -217,12 +231,12 @@ export async function listConsultations(input: ConsultationListInput): Promise<C
 }
 
 export async function getConsultation(id: number): Promise<Consultation> {
-  const payload = await requestConsultation(`/api/conversations/${id}`)
+  const payload = await requestConsultation(conversationPath(id))
   return consultationResponseSchema.parse(payload).data
 }
 
 export async function listConsultationMessages(id: number): Promise<TcmFlowMessage[]> {
-  const payload = await requestConsultation(`/api/conversations/${id}/messages`)
+  const payload = await requestConsultation(`${conversationPath(id)}/messages`)
   return consultationMessagesResponseSchema.parse(payload).data
 }
 
@@ -233,7 +247,7 @@ export async function uploadConsultationFile(
   const body = new FormData()
   body.append('file', file, file.name)
   const payload = await requestConsultation(
-    `/api/conversations/${encodeURIComponent(String(consultationId))}/files`,
+    `${conversationPath(consultationId)}/files`,
     { method: 'POST', body },
   )
   return conversationFileResponseSchema.parse(payload).data
@@ -243,7 +257,7 @@ export async function listConsultationFiles(
   consultationId: number,
 ): Promise<ConversationFile[]> {
   const payload = await requestConsultation(
-    `/api/conversations/${encodeURIComponent(String(consultationId))}/files`,
+    `${conversationPath(consultationId)}/files`,
   )
   return conversationFilesResponseSchema.parse(payload).data
 }
@@ -253,7 +267,7 @@ export async function downloadConsultationFile(
   fileId: string,
 ): Promise<ConversationFileDownload> {
   const response = await fetchApiResponse(
-    `/api/conversations/${encodeURIComponent(String(consultationId))}/files/${encodeURIComponent(fileId)}`,
+    `${conversationPath(consultationId)}/files/${encodeURIComponent(fileId)}`,
   )
   if (!response.ok) {
     throw new Error(
@@ -271,7 +285,7 @@ export async function deleteConsultationFile(
   fileId: string,
 ): Promise<void> {
   await requestConsultation(
-    `/api/conversations/${encodeURIComponent(String(consultationId))}/files/${encodeURIComponent(fileId)}`,
+    `${conversationPath(consultationId)}/files/${encodeURIComponent(fileId)}`,
     { method: 'DELETE' },
   )
 }
@@ -281,7 +295,7 @@ export async function streamConsultationRun(
 ): Promise<StreamConsultationRunResult> {
   const normalizedMessage = input.message.trim()
   const response = await fetchApiResponse(
-    `/api/conversations/${encodeURIComponent(String(input.consultationId))}/runs/stream`,
+    `${conversationPath(input.consultationId)}/runs/stream`,
     {
       method: 'POST',
       body: JSON.stringify(input.patientId == null
@@ -373,7 +387,7 @@ export async function getCurrentConsultationRun(
   signal?: AbortSignal,
 ): Promise<ConsultationRunStatus | null> {
   const response = await fetchApiResponse(
-    `/api/conversations/${encodeURIComponent(String(consultationId))}/runs/current`,
+    `${conversationPath(consultationId)}/runs/current`,
     { method: 'GET', signal },
   )
   const payload = await readJsonResponse(response)
@@ -414,7 +428,7 @@ export async function retryConsultationRun(
 }
 
 async function controlConsultation(id: number, action: 'pause' | 'complete' | 'cancel') {
-  const payload = await requestConsultation(`/api/conversations/${id}/consultation/${action}`, {
+  const payload = await requestConsultation(`${conversationPath(id)}/consultation/${action}`, {
     method: 'POST',
   })
   return z.object({ code: z.number(), message: z.string(), data: consultationContextSchema }).parse(payload).data
@@ -445,13 +459,7 @@ async function recoverRunStatus(
       }
       lastStatusError = null
 
-      if (
-        status.status === 'success' ||
-        status.status === 'waiting_clarification' ||
-        status.status === 'error' ||
-        status.status === 'cancelled' ||
-        status.status === 'interrupted'
-      ) {
+      if (TERMINAL_RUN_STATUSES.has(status.status)) {
         return status
       }
       lastStatus = status
@@ -477,7 +485,7 @@ async function requestRunStatus(
 ): Promise<ConsultationRunStatus> {
   try {
     const response = await fetchApiResponse(
-      `/api/conversations/${encodeURIComponent(String(consultationId))}/runs/${encodeURIComponent(runId)}`,
+      consultationRunPath(consultationId, runId),
       {
         method: 'GET',
         signal,
@@ -505,7 +513,7 @@ async function controlConsultationRun(
   action: 'cancel' | 'resume' | 'retry',
 ) {
   const payload = await requestConsultation(
-    `/api/conversations/${encodeURIComponent(String(consultationId))}/runs/${encodeURIComponent(runId)}/${action}`,
+    `${consultationRunPath(consultationId, runId)}/${action}`,
     { method: 'POST' },
   )
   return parseRunStatusResponse(payload)
@@ -578,6 +586,14 @@ function delay(milliseconds: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, milliseconds))
 }
 
+function conversationPath(consultationId: number) {
+  return `/api/conversations/${encodeURIComponent(String(consultationId))}`
+}
+
+function consultationRunPath(consultationId: number, runId: string) {
+  return `${conversationPath(consultationId)}/runs/${encodeURIComponent(runId)}`
+}
+
 function readDownloadFilename(contentDisposition: string | null) {
   if (!contentDisposition) return null
   const encoded = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1]
@@ -592,5 +608,5 @@ function readDownloadFilename(contentDisposition: string | null) {
 }
 
 export function consultationStatusLabel(status: string | null | undefined) {
-  return ({ IN_PROGRESS: '问诊中', PAUSED: '已暂停', COMPLETED: '已完成', CANCELLED: '已取消' } as Record<string, string>)[status ?? ''] ?? '普通对话'
+  return CONSULTATION_STATUS_LABELS[status ?? ''] ?? '普通对话'
 }

@@ -514,26 +514,26 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
     }
   }
 
-  async function handleResumeRun() {
+  async function handleRecoverableRunAction(
+    action: () => Promise<unknown>,
+    fallbackMessage: string,
+  ) {
     try {
-      await resumeCurrentRun()
+      await action()
     } catch (error) {
-      showConsultationError(error instanceof Error ? error.message : '恢复任务失败，请稍后重试。')
+      showConsultationError(error instanceof Error ? error.message : fallbackMessage)
       if (activeConsultationIdRef.current !== null) {
         startRunRecovery(activeConsultationIdRef.current)
       }
     }
   }
 
-  async function handleRetryRun() {
-    try {
-      await retryCurrentRun()
-    } catch (error) {
-      showConsultationError(error instanceof Error ? error.message : '重试任务失败，请稍后重试。')
-      if (activeConsultationIdRef.current !== null) {
-        startRunRecovery(activeConsultationIdRef.current)
-      }
-    }
+  function handleResumeRun() {
+    return handleRecoverableRunAction(resumeCurrentRun, '恢复任务失败，请稍后重试。')
+  }
+
+  function handleRetryRun() {
+    return handleRecoverableRunAction(retryCurrentRun, '重试任务失败，请稍后重试。')
   }
 
   async function handleRemoveConsultationTag() {
