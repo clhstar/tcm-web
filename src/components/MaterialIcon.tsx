@@ -31,6 +31,7 @@ import checkCircleIcon from '@material-design-icons/svg/outlined/check_circle.sv
 import summarizeIcon from '@material-design-icons/svg/outlined/summarize.svg?raw'
 import swapHorizIcon from '@material-design-icons/svg/outlined/swap_horiz.svg?raw'
 import visibilityIcon from '@material-design-icons/svg/outlined/visibility.svg?raw'
+import systemUpdateAltIcon from '@material-design-icons/svg/outlined/system_update_alt.svg?raw'
 
 const iconSources = {
   accountCircle: accountCircleIcon,
@@ -66,6 +67,7 @@ const iconSources = {
   summarize: summarizeIcon,
   swapHoriz: swapHorizIcon,
   visibility: visibilityIcon,
+  systemUpdateAlt: systemUpdateAltIcon,
 } as const
 
 export type MaterialIconName = keyof typeof iconSources

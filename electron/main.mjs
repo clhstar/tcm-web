@@ -3,11 +3,23 @@ import { createServer } from 'node:http'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { app, BrowserWindow, session, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, session, shell } from 'electron'
+import electronUpdater from 'electron-updater'
+
+const { autoUpdater } = electronUpdater
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url))
 const rendererDirectory = path.resolve(currentDirectory, '..', 'dist')
 const developmentUrl = process.env.TCM_WEB_DEV_SERVER_URL ?? 'http://127.0.0.1:5173'
+const updateCheckInterval = 4 * 60 * 60 * 1000
+
+let updaterState = {
+  status: app.isPackaged ? 'idle' : 'unsupported',
+  currentVersion: app.getVersion(),
+}
+let updateCheckTimer
+let isRestartingForUpdate = false
+let isDownloadingUpdate = false
 
 const mimeTypes = new Map([
   ['.css', 'text/css; charset=utf-8'],
@@ -142,7 +154,95 @@ async function createMainWindow(rendererUrl) {
   return window
 }
 
+function publishUpdaterState(patch) {
+  updaterState = { ...updaterState, ...patch }
+  for (const window of BrowserWindow.getAllWindows()) {
+    window.webContents.send('desktop-updater:state', updaterState)
+  }
+}
+
+function updaterErrorMessage(error) {
+  const message = error instanceof Error ? error.message : String(error)
+  return message.replace(/(github_pat_|ghp_)[A-Za-z0-9_]+/g, '[redacted]')
+}
+
+function configureDesktopUpdater() {
+  ipcMain.handle('desktop-updater:get-state', () => updaterState)
+  ipcMain.handle('desktop-updater:check', async () => {
+    if (!app.isPackaged) return updaterState
+    await checkForDesktopUpdate()
+    return updaterState
+  })
+  ipcMain.handle('desktop-updater:download', async () => {
+    if (!app.isPackaged || updaterState.status !== 'available') return updaterState
+    isDownloadingUpdate = true
+    publishUpdaterState({ status: 'downloading', percent: 0, error: undefined })
+    try {
+      await autoUpdater.downloadUpdate()
+    } catch (error) {
+      publishUpdaterState({ status: 'error', error: updaterErrorMessage(error) })
+    }
+    return updaterState
+  })
+
+  if (!app.isPackaged) return
+
+  autoUpdater.autoDownload = false
+  autoUpdater.autoInstallOnAppQuit = true
+  autoUpdater.allowPrerelease = false
+
+  autoUpdater.on('checking-for-update', () => {
+    publishUpdaterState({ status: 'checking', error: undefined })
+  })
+  autoUpdater.on('update-available', (info) => {
+    isDownloadingUpdate = false
+    publishUpdaterState({ status: 'available', version: info.version, percent: undefined, error: undefined })
+  })
+  autoUpdater.on('update-not-available', () => {
+    isDownloadingUpdate = false
+    publishUpdaterState({ status: 'idle', version: undefined, percent: undefined, error: undefined })
+  })
+  autoUpdater.on('download-progress', (progress) => {
+    const percent = Math.max(0, Math.min(100, progress.percent))
+    publishUpdaterState({ status: 'downloading', percent })
+    for (const window of BrowserWindow.getAllWindows()) window.setProgressBar(percent / 100)
+  })
+  autoUpdater.on('update-downloaded', (info) => {
+    isDownloadingUpdate = false
+    publishUpdaterState({ status: 'downloaded', version: info.version, percent: 100 })
+    for (const window of BrowserWindow.getAllWindows()) window.setProgressBar(-1)
+    if (isRestartingForUpdate) return
+    isRestartingForUpdate = true
+    setTimeout(() => autoUpdater.quitAndInstall(false, true), 1200)
+  })
+  autoUpdater.on('error', (error) => {
+    for (const window of BrowserWindow.getAllWindows()) window.setProgressBar(-1)
+    if (isDownloadingUpdate) {
+      isDownloadingUpdate = false
+      publishUpdaterState({ status: 'error', error: updaterErrorMessage(error) })
+    } else {
+      publishUpdaterState({ status: 'idle', error: undefined })
+    }
+  })
+}
+
+async function checkForDesktopUpdate() {
+  if (!app.isPackaged || updaterState.status === 'checking' || updaterState.status === 'downloading') return
+  try {
+    await autoUpdater.checkForUpdates()
+  } catch (error) {
+    if (isDownloadingUpdate) {
+      isDownloadingUpdate = false
+      publishUpdaterState({ status: 'error', error: updaterErrorMessage(error) })
+    } else {
+      publishUpdaterState({ status: 'idle', error: undefined })
+    }
+  }
+}
+
 let rendererServer
+
+configureDesktopUpdater()
 
 app.whenReady().then(async () => {
   session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false))
@@ -153,6 +253,10 @@ app.whenReady().then(async () => {
     : developmentUrl
 
   await createMainWindow(rendererUrl)
+  if (app.isPackaged) {
+    setTimeout(() => void checkForDesktopUpdate(), 3000)
+    updateCheckTimer = setInterval(() => void checkForDesktopUpdate(), updateCheckInterval)
+  }
   app.on('activate', async () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       await createMainWindow(rendererUrl)
@@ -166,4 +270,7 @@ app.on('window-all-closed', () => {
   }
 })
 
-app.on('before-quit', () => rendererServer?.close())
+app.on('before-quit', () => {
+  if (updateCheckTimer) clearInterval(updateCheckTimer)
+  rendererServer?.close()
+})

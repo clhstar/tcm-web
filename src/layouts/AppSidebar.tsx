@@ -3,6 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router'
 import { navigationItems } from '../app/navigation'
 import { MaterialIcon } from '../components/MaterialIcon'
 import { useRecentConversations } from '../features/consultation/conversationQueries'
+import { DesktopUpdateNotice } from '../features/desktop-update/DesktopUpdateNotice'
 
 const sidebarNavigationItems = navigationItems.filter(
   (item) => item.to !== '/consultation' && item.to !== '/settings',
@@ -112,6 +113,8 @@ export function AppSidebar({ isCollapsed, userName, onLogout, onToggle }: AppSid
           ) : null}
         </nav>
       </section>
+
+      <DesktopUpdateNotice />
 
       <div className="sidebar-account-zone" ref={accountMenuRef}>
         {isAccountMenuOpen ? (

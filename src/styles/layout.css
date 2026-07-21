@@ -672,6 +672,102 @@
   padding-top: 6px;
 }
 
+.desktop-update-notice {
+  position: relative;
+  width: 100%;
+  min-height: 48px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 9px;
+  padding: 7px 9px 9px;
+  color: #1f2937;
+  background: #e4e9ed;
+  text-align: left;
+  overflow: hidden;
+}
+
+.desktop-update-notice:not(:disabled):hover {
+  background: #dce3e8;
+}
+
+.desktop-update-notice:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.desktop-update-icon {
+  width: 29px;
+  height: 29px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #202b3a;
+}
+
+.desktop-update-icon .material-icon {
+  width: 17px;
+  height: 17px;
+}
+
+.desktop-update-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.desktop-update-copy strong,
+.desktop-update-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.desktop-update-copy strong {
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.desktop-update-copy small {
+  color: #69727d;
+  font-size: 10px;
+}
+
+.desktop-update-progress {
+  position: absolute;
+  right: 9px;
+  bottom: 4px;
+  left: 48px;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(31, 41, 55, 0.12);
+  overflow: hidden;
+}
+
+.desktop-update-progress > span {
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  background: #334155;
+  transition: width 180ms ease;
+}
+
+.sidebar-collapsed .desktop-update-notice {
+  width: 48px;
+  min-height: 48px;
+  justify-content: center;
+  padding: 0;
+}
+
+.sidebar-collapsed .desktop-update-copy,
+.sidebar-collapsed .desktop-update-progress {
+  display: none;
+}
+
 .sidebar-account-button {
   min-height: 44px;
   border: 0;

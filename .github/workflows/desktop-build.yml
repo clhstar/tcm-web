@@ -21,12 +21,15 @@ jobs:
             paths: |
               release/*.exe
               release/*.blockmap
+              release/latest*.yml
           - os: macos-latest
             command: build:desktop:mac
             artifact: macos
             paths: |
               release/*.dmg
               release/*.zip
+              release/*.blockmap
+              release/latest*.yml
 
     runs-on: ${{ matrix.os }}
     defaults:
