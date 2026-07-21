@@ -259,8 +259,9 @@ async function loginThroughUi(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('密码'), 'Passw0rd!')
   await user.click(screen.getByText('登录', { selector: 'button[type="submit"]' }))
 
-  expect(await screen.findByRole('link', { name: '问诊工作台' })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: '新对话' })).toBeInTheDocument()
+  const sidebar = await screen.findByRole('complementary', { name: '主菜单' })
+  expect(within(sidebar).getByRole('button', { name: '新对话' })).toBeInTheDocument()
+  expect(within(sidebar).queryByRole('link', { name: '问诊工作台' })).not.toBeInTheDocument()
 }
 
 function findRequest(
@@ -320,9 +321,19 @@ describe('App routes and consultation entry', () => {
     await loginThroughUi(user)
 
     expect(await screen.findByRole('heading', { name: '新建对话' })).toBeInTheDocument()
-    expect(screen.getByRole('textbox', { name: '第一条消息' })).toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: '页面位置' })).not.toBeInTheDocument()
+    const messageInput = screen.getByRole('textbox', { name: '消息' })
+    expect(messageInput).toHaveAttribute('placeholder', '输入你想咨询的问题')
+    expect(screen.getByText('消息')).toHaveClass('visually-hidden')
+    expect(screen.queryByText('不添加标签时是普通对话；只有显式添加患者标签才会开始问诊。')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '描述当前症状' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '梳理既往情况' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '解读检查报告' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '开始中医问诊' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '解读检查报告' }))
+    expect(messageInput).toHaveValue('我想了解一份检查报告，请告诉我需要提供哪些指标和背景信息。')
     expect(screen.getByRole('button', { name: '添加问诊标签' })).toBeInTheDocument()
-    expect(screen.getByRole('complementary', { name: '患者和问诊信息' })).toHaveTextContent('张三')
+    expect(screen.queryByRole('complementary', { name: '患者和问诊信息' })).not.toBeInTheDocument()
 
     const patientRequest = findRequest(fetchMock, 'GET', '/api/patient')
     const conversationRequest = findRequest(fetchMock, 'GET', '/api/conversations/page')
@@ -335,6 +346,35 @@ describe('App routes and consultation entry', () => {
     expect(new URL(String(conversationRequest?.[0])).searchParams.has('patientId')).toBe(false)
   })
 
+  it('shows recent conversations in the Codex-style sidebar and keeps only tagged consultations in records', async () => {
+    const conversationPage: ConversationPageResponse = {
+      ...emptyConversationPageResponse,
+      data: {
+        ...emptyConversationPageResponse.data,
+        total: 2,
+        records: [activeConversation, createdConversation],
+      },
+    }
+    installFetchRouter({ conversationPage })
+    const user = userEvent.setup()
+    render(<App />)
+
+    await loginThroughUi(user)
+
+    const sidebar = screen.getByRole('complementary', { name: '主菜单' })
+    const recentConversations = within(sidebar).getByRole('navigation', { name: '最近对话' })
+    expect(await within(recentConversations).findAllByRole('link', { name: '打开对话：新对话' })).toHaveLength(2)
+    expect(within(sidebar).queryByRole('link', { name: '历史记录' })).not.toBeInTheDocument()
+
+    await user.click(within(sidebar).getByRole('link', { name: '问诊记录' }))
+
+    expect(await screen.findByRole('heading', { name: '问诊记录', level: 2 })).toBeInTheDocument()
+    const savedRecords = await screen.findByLabelText('已保存的问诊记录')
+    expect(within(savedRecords).getByText('张三 · 记录 #901')).toBeInTheDocument()
+    expect(within(savedRecords).queryByText('未绑定患者')).not.toBeInTheDocument()
+    expect(window.location.pathname).toBe('/consultation-records')
+  })
+
   it('navigates from the consultation workspace to the patient directory', async () => {
     installFetchRouter()
     const user = userEvent.setup()
@@ -344,6 +384,7 @@ describe('App routes and consultation entry', () => {
     await user.click(within(screen.getByRole('complementary', { name: '主菜单' })).getByRole('link', { name: '患者档案' }))
 
     expect(await screen.findByRole('region', { name: '患者档案' })).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: '页面位置' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '查看 张三' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '新增档案' })).toBeInTheDocument()
     expect(window.location.pathname).toBe('/patients')
@@ -373,8 +414,8 @@ describe('App routes and consultation entry', () => {
     render(<App />)
 
     await loginThroughUi(user)
-    await user.type(await screen.findByRole('textbox', { name: '第一条消息' }), '最近饭后胃胀')
-    await user.click(screen.getByRole('button', { name: '发送主诉' }))
+    await user.type(await screen.findByRole('textbox', { name: '消息' }), '最近饭后胃胀')
+    await user.click(screen.getByRole('button', { name: '发送消息' }))
 
     expect(await screen.findByText('已收到，我会先按普通对话回答。')).toBeInTheDocument()
     const createRequest = findRequest(fetchMock, 'POST', '/api/conversations')
@@ -397,8 +438,13 @@ describe('App routes and consultation entry', () => {
     await loginThroughUi(user)
     await user.click(await screen.findByRole('button', { name: '添加问诊标签' }))
     await user.click(within(screen.getByRole('dialog', { name: '选择档案' })).getByRole('button', { name: '选择' }))
-    await user.type(screen.getByRole('textbox', { name: '第一条消息' }), '最近饭后胃胀')
-    await user.click(screen.getByRole('button', { name: '发送主诉' }))
+    expect(screen.queryByRole('complementary', { name: '患者和问诊信息' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '切换问诊患者，当前张三' }))
+    expect(screen.getByRole('dialog', { name: '选择档案' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '关闭选择档案' }))
+    expect(screen.getByRole('button', { name: '删除本地问诊标签' }).querySelector('.material-icon')).not.toBeNull()
+    await user.type(screen.getByRole('textbox', { name: '患者主诉' }), '最近饭后胃胀')
+    await user.click(screen.getByRole('button', { name: '开始问诊' }))
 
     expect(await screen.findByText('已收到，我会先按普通对话回答。')).toBeInTheDocument()
     const streamRequest = findRequest(
@@ -488,7 +534,7 @@ describe('App routes and consultation entry', () => {
 
     await loginThroughUi(user)
     expect(await screen.findByText('问诊·张三')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '切换患者' }))
+    await user.click(screen.getByRole('button', { name: '切换问诊患者，当前张三' }))
     await user.click(within(screen.getByRole('dialog', { name: '选择档案' })).getByRole('button', { name: '不结合档案回答' }))
 
     expect((await screen.findAllByText('问诊已暂停')).length).toBeGreaterThan(0)
@@ -562,11 +608,10 @@ describe('App routes and consultation entry', () => {
 
     await loginThroughUi(user)
     expect(await screen.findByText('问诊·张三')).toBeInTheDocument()
-    await user.click(within(screen.getByRole('complementary', { name: '主菜单' })).getByRole('link', { name: '历史记录' }))
-    const brokenTitle = await screen.findByText('无法载入的对话')
-    const brokenButton = brokenTitle.closest('button')
-    expect(brokenButton).not.toBeNull()
-    await user.click(brokenButton!)
+    await user.click(
+      within(screen.getByRole('navigation', { name: '最近对话' }))
+        .getByRole('link', { name: '打开对话：无法载入的对话' }),
+    )
 
     expect(await screen.findByRole('heading', { name: '新建对话' })).toBeInTheDocument()
     expect(screen.queryByRole('textbox', { name: '发送消息' })).not.toBeInTheDocument()

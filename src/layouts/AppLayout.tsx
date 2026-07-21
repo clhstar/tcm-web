@@ -11,9 +11,9 @@ type AppLayoutProps = {
   onLogout: () => void
 }
 
-const SIDEBAR_DEFAULT_WIDTH = 276
+const SIDEBAR_DEFAULT_WIDTH = 260
 const SIDEBAR_MIN_WIDTH = 220
-const SIDEBAR_MAX_WIDTH = 360
+const SIDEBAR_MAX_WIDTH = 340
 const SIDEBAR_COLLAPSED_WIDTH = 72
 
 export function AppLayout({ children, userName, onLogout }: AppLayoutProps) {
@@ -31,6 +31,9 @@ export function AppLayout({ children, userName, onLogout }: AppLayoutProps) {
   ].filter(Boolean).join(' ')
   const breadcrumbs = getBreadcrumbItems(location.pathname, location.search)
   const pageTitle = breadcrumbs.at(-1)?.label ?? getPageTitle(location.pathname)
+  const isConsultationPage =
+    location.pathname === '/consultation' || location.pathname.startsWith('/consultation/')
+  const mainClassName = isConsultationPage ? 'dashboard-main without-breadcrumb' : 'dashboard-main'
 
   function toggleSidebar() {
     setIsSidebarCollapsed((current) => !current)
@@ -102,12 +105,17 @@ export function AppLayout({ children, userName, onLogout }: AppLayoutProps) {
         />
       </div>
 
-      <main className="dashboard-main">
-        <header className="dashboard-topbar">
-          <Breadcrumb items={breadcrumbs} onNavigate={navigate} />
-          <h1 className="visually-hidden">{pageTitle}</h1>
-        </header>
-        <div className="dashboard-content">{children}</div>
+      <main className={mainClassName}>
+        {isConsultationPage ? null : (
+          <header className="dashboard-topbar">
+            <Breadcrumb items={breadcrumbs} onNavigate={navigate} />
+            <h1 className="visually-hidden">{pageTitle}</h1>
+          </header>
+        )}
+        <div className="dashboard-content">
+          {isConsultationPage ? <h1 className="visually-hidden">{pageTitle}</h1> : null}
+          {children}
+        </div>
       </main>
 
       <MobileNav />

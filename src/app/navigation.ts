@@ -11,7 +11,7 @@ export type NavigationItem = {
 
 export const navigationItems: NavigationItem[] = [
   { label: '问诊工作台', description: '实时对话与智能协作', icon: 'chat', to: '/consultation', match: ['/consultation'] },
-  { label: '历史记录', description: '归档问诊与状态追踪', icon: 'history', to: '/history', match: ['/history', '/summary'] },
+  { label: '问诊记录', description: '患者、主诉与问诊状态', icon: 'factCheck', to: '/consultation-records', match: ['/consultation-records'] },
   { label: '患者档案', description: '患者资料与检索管理', icon: 'group', to: '/patients', match: ['/patients'] },
   { label: '知识库', description: '证据、古籍与检索边界', icon: 'libraryBooks', to: '/knowledge', match: ['/knowledge'] },
   { label: '系统设置', description: '账号、偏好与安全', icon: 'settings', to: '/settings', match: ['/settings'] },
@@ -19,7 +19,7 @@ export const navigationItems: NavigationItem[] = [
 
 export function getPageTitle(pathname: string) {
   if (pathname.startsWith('/summary') || pathname.includes('/summary')) return '问诊总结'
-  if (pathname.startsWith('/history')) return '历史问诊记录'
+  if (pathname.startsWith('/consultation-records')) return '问诊记录'
   if (pathname.startsWith('/patients')) return '患者档案'
   if (pathname.startsWith('/knowledge')) return '知识库'
   if (pathname.startsWith('/settings')) return '系统设置'
@@ -27,9 +27,6 @@ export function getPageTitle(pathname: string) {
 }
 
 export function getBreadcrumbItems(pathname: string, search: string): BreadcrumbItem[] {
-  if (pathname.startsWith('/summary') || pathname.includes('/summary')) {
-    return [{ label: '历史问诊记录', to: '/history' }, { label: '问诊总结' }]
-  }
   if (pathname.startsWith('/patients')) {
     const parent = { label: '患者档案', to: '/patients' }
     if (pathname === '/patients/new') return [parent, { label: '新增档案' }]

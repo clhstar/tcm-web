@@ -2,6 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router'
 import { navigationItems } from '../app/navigation'
 import { MaterialIcon } from '../components/MaterialIcon'
+import { useRecentConversations } from '../features/consultation/conversationQueries'
+
+const sidebarNavigationItems = navigationItems.filter(
+  (item) => item.to !== '/consultation' && item.to !== '/settings',
+)
 
 type AppSidebarProps = {
   isCollapsed: boolean
@@ -13,6 +18,8 @@ type AppSidebarProps = {
 export function AppSidebar({ isCollapsed, userName, onLogout, onToggle }: AppSidebarProps) {
   const location = useLocation()
   const navigate = useNavigate()
+  const conversationQuery = useRecentConversations()
+  const conversations = conversationQuery.data?.records ?? []
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false)
   const accountMenuRef = useRef<HTMLDivElement>(null)
 
@@ -46,7 +53,7 @@ export function AppSidebar({ isCollapsed, userName, onLogout, onToggle }: AppSid
   return (
     <aside id="dashboard-sidebar" className="dashboard-sidebar" aria-label="主菜单">
       <div className="dashboard-brand">
-        <div><strong>中医问诊系统</strong><span>AI 辅助中医智能问诊平台</span></div>
+        <div><strong>中医问诊</strong></div>
         <button
           type="button"
           className="sidebar-toggle-button"
@@ -65,11 +72,12 @@ export function AppSidebar({ isCollapsed, userName, onLogout, onToggle }: AppSid
       </button>
 
       <nav className="dashboard-nav">
-        {navigationItems.map((item) => (
+        {sidebarNavigationItems.map((item) => (
           <NavLink
             key={item.to}
-            className={item.match.some((path) => location.pathname.startsWith(path)) ? 'dashboard-nav-item active' : 'dashboard-nav-item'}
+            className={isNavigationItemActive(item.to, item.match, location.pathname) ? 'dashboard-nav-item active' : 'dashboard-nav-item'}
             to={item.to}
+            end={item.to === '/consultation'}
             aria-label={item.label}
           >
             <MaterialIcon name={item.icon} />
@@ -77,6 +85,33 @@ export function AppSidebar({ isCollapsed, userName, onLogout, onToggle }: AppSid
           </NavLink>
         ))}
       </nav>
+
+      <section className="sidebar-conversations" aria-labelledby="sidebar-conversations-title">
+        <div className="sidebar-section-label">
+          <span id="sidebar-conversations-title">对话记录</span>
+          {conversations.length > 0 ? <small>{conversations.length}</small> : null}
+        </div>
+        <nav className="sidebar-conversation-list" aria-label="最近对话">
+          {conversations.map((consultation) => {
+            const title = consultation.chiefComplaint?.trim() || '新对话'
+            return (
+              <NavLink
+                key={consultation.id}
+                className={({ isActive }) => isActive ? 'sidebar-conversation-item active' : 'sidebar-conversation-item'}
+                to={`/consultation/${consultation.id}`}
+                aria-label={`打开对话：${title}`}
+                title={title}
+              >
+                <span>{title}</span>
+              </NavLink>
+            )
+          })}
+          {conversationQuery.isPending ? <span className="sidebar-conversation-empty">正在加载...</span> : null}
+          {!conversationQuery.isPending && conversations.length === 0 ? (
+            <span className="sidebar-conversation-empty">对话会自动保存在这里</span>
+          ) : null}
+        </nav>
+      </section>
 
       <div className="sidebar-account-zone" ref={accountMenuRef}>
         {isAccountMenuOpen ? (
@@ -87,10 +122,7 @@ export function AppSidebar({ isCollapsed, userName, onLogout, onToggle }: AppSid
               <MaterialIcon name="chevronRight" />
             </button>
             <div className="account-menu-divider" />
-            <button type="button" role="menuitem" onClick={() => setIsAccountMenuOpen(false)}><MaterialIcon name="assignment" /><span>升级套餐</span></button>
-            <button type="button" role="menuitem" onClick={() => navigateFromMenu('/settings')}><MaterialIcon name="settings" /><span>个性化</span></button>
-            <button type="button" role="menuitem" onClick={() => navigateFromMenu('/settings')}><MaterialIcon name="person" /><span>个人资料</span></button>
-            <button type="button" role="menuitem" onClick={() => navigateFromMenu('/settings')}><MaterialIcon name="settings" /><span>设置</span></button>
+            <button type="button" role="menuitem" onClick={() => navigateFromMenu('/settings')}><MaterialIcon name="settings" /><span>系统设置</span></button>
             <div className="account-menu-divider" />
             <button type="button" role="menuitem" onClick={() => navigateFromMenu('/knowledge')}><MaterialIcon name="libraryBooks" /><span>帮助</span><MaterialIcon name="chevronRight" /></button>
             <button type="button" role="menuitem" onClick={logout}><MaterialIcon name="logout" /><span>退出登录</span></button>
@@ -112,6 +144,13 @@ export function AppSidebar({ isCollapsed, userName, onLogout, onToggle }: AppSid
       </div>
     </aside>
   )
+}
+
+function isNavigationItemActive(to: string, match: string[], pathname: string) {
+  if (to === '/consultation') {
+    return pathname === '/consultation' || pathname === '/consultation/new'
+  }
+  return match.some((path) => pathname.startsWith(path))
 }
 
 function readAvatarLabel(userName: string) {

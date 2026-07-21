@@ -26,7 +26,7 @@ describe('PatientForm', () => {
     )
     const user = userEvent.setup()
 
-    render(
+    const { container } = render(
       <PatientForm
         patient={patient}
         submitLabel="保存患者"
@@ -39,6 +39,7 @@ describe('PatientForm', () => {
     expect(screen.getByLabelText('手机号')).toHaveValue('13900139000')
     expect(screen.getByLabelText('性别')).toHaveValue('FEMALE')
     expect(screen.getByLabelText('出生日期')).toHaveValue('1992-02-02')
+    expect(container.querySelectorAll('.patient-form-field')).toHaveLength(4)
 
     await user.clear(screen.getByLabelText('姓名'))
     await user.type(screen.getByLabelText('姓名'), '李先生')

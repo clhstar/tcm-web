@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const fileApi = vi.hoisted(() => ({
   list: vi.fn(),
@@ -20,7 +20,11 @@ vi.mock('../../api/consultation', async (importOriginal) => {
   }
 })
 
-import { ConsultationFilesPanel } from './ConsultationFilesPanel'
+import {
+  ConsultationComposerFiles,
+  ConsultationMessageArtifacts,
+} from './ConsultationFilesPanel'
+import { useConsultationFiles } from './useConsultationFiles'
 
 const uploaded = {
   fileId: 'file-1',
@@ -34,21 +38,62 @@ const uploaded = {
   updatedAt: '2026-07-15T00:00:00Z',
 }
 
-describe('ConsultationFilesPanel', () => {
+const artifact = {
+  ...uploaded,
+  fileId: 'file-2',
+  kind: 'artifact' as const,
+  name: 'report.md',
+  path: 'artifacts/report.md',
+}
+
+function FilesHarness() {
+  const workspace = useConsultationFiles(101, 'idle')
+  return (
+    <>
+      <ConsultationComposerFiles
+        files={workspace.files.filter((file) => file.kind === 'upload')}
+        disabled={false}
+        isBusy={workspace.isBusy}
+        error={workspace.error}
+        onUpload={workspace.upload}
+        onRemove={workspace.remove}
+      />
+      <ConsultationMessageArtifacts
+        files={workspace.files.filter((file) => file.kind === 'artifact')}
+        isBusy={workspace.isBusy}
+        onDownload={workspace.download}
+      />
+    </>
+  )
+}
+
+describe('consultation file controls', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    fileApi.list.mockResolvedValue([uploaded])
+    fileApi.list.mockResolvedValue([uploaded, artifact])
     fileApi.upload.mockResolvedValue(uploaded)
+    fileApi.download.mockResolvedValue({ blob: new Blob(['report']), filename: 'report.md' })
     fileApi.remove.mockResolvedValue(undefined)
+    vi.stubGlobal('URL', {
+      ...URL,
+      createObjectURL: vi.fn(() => 'blob:report'),
+      revokeObjectURL: vi.fn(),
+    })
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
   })
 
-  it('loads files and uploads through the active conversation', async () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
+  it('keeps uploads above the composer and generated files in a download card', async () => {
     const user = userEvent.setup()
-    const { container } = render(
-      <ConsultationFilesPanel consultationId={101} disabled={false} refreshKey="idle" />,
-    )
+    const { container } = render(<FilesHarness />)
 
     expect(await screen.findByText('notes.txt')).toBeInTheDocument()
+    expect(screen.getByText('report.md')).toBeInTheDocument()
+
     const input = container.querySelector('input[type="file"]') as HTMLInputElement
     const file = new File(['hello'], 'new.txt', { type: 'text/plain' })
     await user.upload(input, file)
@@ -57,13 +102,30 @@ describe('ConsultationFilesPanel', () => {
     expect(fileApi.list).toHaveBeenCalledWith(101)
   })
 
-  it('deletes a file from the visible list', async () => {
-    render(<ConsultationFilesPanel consultationId={101} disabled={false} refreshKey="idle" />)
-    expect(await screen.findByText('notes.txt')).toBeInTheDocument()
+  it('downloads an artifact from its reply card', async () => {
+    const user = userEvent.setup()
+    render(<FilesHarness />)
 
-    fireEvent.click(screen.getByRole('button', { name: '删除' }))
+    await user.click(await screen.findByRole('button', { name: '下载 report.md' }))
+
+    await waitFor(() => expect(fileApi.download).toHaveBeenCalledWith(101, 'file-2'))
+  })
+
+  it('removes an uploaded attachment from the composer', async () => {
+    const user = userEvent.setup()
+    render(<FilesHarness />)
+
+    await user.click(await screen.findByRole('button', { name: '删除 notes.txt' }))
 
     await waitFor(() => expect(fileApi.remove).toHaveBeenCalledWith(101, 'file-1'))
     expect(screen.queryByText('notes.txt')).not.toBeInTheDocument()
+  })
+
+  it('keeps upload available when the initial file sync fails', async () => {
+    fileApi.list.mockRejectedValueOnce(new Error('文件同步失败'))
+    render(<FilesHarness />)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('文件同步失败')
+    expect(screen.getByRole('button', { name: '上传文件' })).toBeEnabled()
   })
 })

@@ -113,6 +113,31 @@
     height: auto;
   }
 
+  .chat-shell-panel:has(.starter-route) {
+    padding: 0;
+  }
+
+  .consultation-surface.is-starter,
+  .consultation-surface.is-starter .workspace-grid.consultation-starter-grid,
+  .consultation-surface.is-starter .chat-route.starter-route {
+    min-height: calc(100dvh - 154px);
+    height: 100%;
+  }
+
+  .starter-route .consultation-starter-card {
+    gap: 28px;
+    padding: 24px 20px 14px;
+  }
+
+  .consultation-starter-welcome {
+    padding-top: 20px;
+    transform: none;
+  }
+
+  .consultation-suggestion-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .single-module-panel,
   .patient-focus-panel,
   .patient-context-panel,
@@ -127,11 +152,6 @@
 
   .message-input-shell {
     grid-template-columns: 1fr;
-  }
-
-  .archive-input-shell input,
-  .message-send-button {
-    grid-column: auto;
   }
 
   .form-grid,
@@ -224,6 +244,61 @@
     width: 100%;
   }
 
+  .starter-route .consultation-starter-card {
+    gap: 20px;
+    padding: 14px 4px 10px;
+  }
+
+  .consultation-starter-welcome {
+    gap: 12px;
+    padding-top: 8px;
+  }
+
+  .consultation-starter-mark {
+    width: 40px;
+    height: 40px;
+  }
+
+  .consultation-starter-mark .material-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .consultation-starter-welcome h3 {
+    margin-bottom: 4px;
+    font-size: 24px;
+  }
+
+  .consultation-suggestion-grid {
+    gap: 8px;
+  }
+
+  .consultation-suggestion-card {
+    min-height: 86px;
+    gap: 10px;
+    border-radius: 13px;
+    padding: 12px;
+  }
+
+  .consultation-suggestion-card small,
+  .starter-submit-hint {
+    display: none;
+  }
+
+  .consultation-composer-shell {
+    border-radius: 16px;
+  }
+
+  .consultation-composer-shell > textarea {
+    height: 66px;
+    min-height: 66px;
+    padding: 13px 13px 8px;
+  }
+
+  .consultation-composer-actions {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
   .message-bubble,
   .thinking-process-block,
   .collaboration-process-block {
@@ -235,5 +310,37 @@
 @media (prefers-reduced-motion: reduce) {
   .assistant-typing-indicator span {
     animation: none;
+  }
+}
+
+@media (max-width: 880px) {
+  .consultation-records-page {
+    padding: 18px;
+  }
+
+  .consultation-records-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .consultation-records-list-head {
+    display: none;
+  }
+
+  .consultation-record-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 9px 14px;
+  }
+
+  .consultation-record-primary {
+    grid-column: 1 / -1;
+  }
+
+  .consultation-record-row time {
+    justify-self: end;
+  }
+
+  .consultation-record-row > .material-icon {
+    display: none;
   }
 }

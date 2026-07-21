@@ -20,18 +20,38 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 16px;
+  --consultation-reading-width: 760px;
+  --consultation-body-font-size: 14px;
+  --consultation-body-line-height: 1.65;
+}
+
+.consultation-chat-panel > .consultation-panel-header,
+.consultation-chat-panel > .muted-line,
+.consultation-chat-panel > .consultation-chat-body,
+.consultation-chat-panel > .consultation-message-form,
+.consultation-chat-panel > .consultation-empty {
+  width: min(var(--consultation-reading-width), 100%);
+  min-width: 0;
+  justify-self: center;
+}
+
+.consultation-chat-panel > .consultation-chat-body {
+  width: calc(100% + 32px);
+  justify-self: stretch;
+  margin-inline: -16px;
 }
 
 .consultation-surface.is-starter,
-.workspace-grid.with-context.consultation-starter-grid,
+.workspace-grid.consultation-starter-grid,
 .chat-route.starter-route {
   min-height: 0;
-  height: auto;
+  height: 100%;
 }
 
-.consultation-surface.is-starter,
-.chat-route.starter-route {
-  align-content: start;
+.consultation-surface.is-starter {
+  overflow: hidden;
+  border-radius: 16px;
+  background: #ffffff;
 }
 
 .workspace-grid.with-context.consultation-starter-grid {
@@ -39,19 +59,129 @@
 }
 
 .chat-route.starter-route {
-  grid-template-rows: auto;
+  align-content: stretch;
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .starter-route .consultation-starter-card {
-  align-self: start;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-self: stretch;
+  gap: clamp(26px, 4vh, 48px);
+  border: 0;
+  border-radius: 0;
+  padding: clamp(24px, 3vw, 44px) clamp(20px, 4vw, 52px) 0;
+  background: #ffffff;
+}
+
+.consultation-starter-welcome {
+  width: min(760px, 100%);
+  align-self: center;
+  justify-self: center;
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  padding-top: clamp(20px, 6vh, 72px);
+  transform: translateY(clamp(28px, 5vh, 46px));
+}
+
+.consultation-starter-mark {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  color: #b8bdc4;
+}
+
+.consultation-starter-mark .material-icon {
+  width: 42px;
+  height: 42px;
+}
+
+.consultation-starter-welcome h3 {
+  margin: 0 0 14px;
+  color: #202124;
+  font-size: clamp(25px, 2.3vw, 31px);
+  font-weight: 520;
+  letter-spacing: -0.035em;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.consultation-suggestion-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.consultation-suggestion-card {
+  min-width: 0;
+  min-height: 108px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+  border: 1px solid #e2e4e7;
+  border-radius: 16px;
+  padding: 16px;
+  color: var(--app-text);
+  background: #ffffff;
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.05);
+  text-align: left;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.consultation-suggestion-card:hover {
+  border-color: #c9cdd2;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+  transform: translateY(-2px);
+}
+
+.consultation-suggestion-card .material-icon {
+  width: 19px;
+  height: 19px;
+  color: #5b8def;
+}
+
+.consultation-suggestion-card:nth-child(2) .material-icon { color: #8b5cf6; }
+.consultation-suggestion-card:nth-child(3) .material-icon { color: #18a957; }
+.consultation-suggestion-card:nth-child(4) .material-icon { color: #ef6c35; }
+
+.consultation-suggestion-card > span {
+  min-width: 0;
+  align-self: end;
+  display: grid;
+  gap: 4px;
+}
+
+.consultation-suggestion-card strong,
+.consultation-suggestion-card small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.consultation-suggestion-card strong {
+  font-size: 14px;
+  font-weight: 760;
+  line-height: 1.35;
+}
+
+.consultation-suggestion-card small {
+  color: var(--app-text-muted);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .consultation-panel-header h3 {
   margin: 4px 0 0;
   color: var(--app-text);
-  font-size: 20px;
-  font-weight: 850;
-  line-height: 1.25;
+  font-size: 18px;
+  font-weight: 760;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
 }
 
 .consultation-panel-header strong {
@@ -118,9 +248,54 @@
   max-height: none;
   display: grid;
   align-content: start;
-  gap: 12px;
+  gap: 26px;
   overflow: auto;
-  padding: 6px 4px 12px 0;
+  padding: 12px 0 24px;
+  scrollbar-color: rgba(96, 101, 107, 0.28) transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.consultation-chat-stream::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.consultation-chat-stream::-webkit-scrollbar-track,
+.consultation-chat-stream::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.consultation-chat-stream::-webkit-scrollbar-thumb {
+  min-height: 44px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(96, 101, 107, 0.28);
+  background-clip: content-box;
+}
+
+.consultation-chat-stream:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(81, 86, 92, 0.48);
+}
+
+.consultation-chat-stream::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.consultation-chat-stream > .message-bubble.assistant,
+.consultation-chat-stream > .thinking-process-block,
+.consultation-chat-stream > .collaboration-process-block {
+  width: min(var(--consultation-reading-width), calc(100% - 24px));
+  justify-self: center;
+}
+
+.consultation-chat-stream > .message-bubble.user {
+  margin-right: max(
+    12px,
+    calc((100% - var(--consultation-reading-width)) / 2)
+  );
 }
 
 .consultation-chat-stream:empty {
@@ -128,49 +303,54 @@
 }
 
 .message-bubble {
-  max-width: min(720px, 86%);
+  max-width: min(780px, 100%);
   display: grid;
-  gap: 9px;
-  border-radius: 8px;
-  padding: 14px 16px;
+  gap: 10px;
+  border-radius: 0;
+  padding: 0;
+  font-size: var(--consultation-body-font-size);
+  line-height: var(--consultation-body-line-height);
 }
 
 .message-bubble header {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  color: var(--app-text-muted);
-  font-size: 12px;
+  display: none;
 }
 
 .message-bubble p {
   margin: 0;
   color: var(--app-text);
-  line-height: 1.65;
+  line-height: inherit;
 }
 
 .message-bubble.user {
+  max-width: min(680px, 78%);
   justify-self: end;
-  color: #ffffff;
-  background: #17202b;
+  border-radius: 16px;
+  padding: 10px 14px;
+  color: var(--app-text);
+  background: #f3f3f3;
 }
 
-.message-bubble.user p,
-.message-bubble.user header {
-  color: #ffffff;
+.message-bubble.user p {
+  color: var(--app-text);
 }
 
 .message-bubble.assistant {
+  width: 100%;
+  max-width: none;
   justify-self: start;
-  border: 1px solid var(--app-border-soft);
-  background: var(--app-muted-bg);
+  border: 0;
+  padding: 0 6px;
+  background: transparent;
 }
 
 .assistant-markdown {
   display: grid;
-  gap: 8px;
+  gap: 10px;
+  font-size: var(--consultation-body-font-size);
   color: var(--app-text);
-  line-height: 1.6;
+  line-height: var(--consultation-body-line-height);
+  letter-spacing: 0;
   overflow-wrap: anywhere;
 }
 
@@ -182,14 +362,14 @@
   margin: 2px 0 0;
   color: var(--app-text);
   font-size: 15px;
-  line-height: 1.35;
-  font-weight: 850;
+  line-height: 1.45;
+  font-weight: 700;
 }
 
 .assistant-markdown :where(ul, ol) {
   display: grid;
-  gap: 5px;
-  padding-left: 18px;
+  gap: 6px;
+  padding-left: 22px;
 }
 
 .assistant-markdown :where(code) {
@@ -274,19 +454,13 @@
 
 .consultation-message-form {
   gap: 8px;
-  padding-top: 10px;
-  border-top: 1px solid var(--app-border-soft);
 }
 
 .message-input-shell {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: center;
-}
-
-.archive-input-shell input {
-  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  align-items: stretch;
 }
 
 .message-archive-row,
@@ -295,8 +469,7 @@
   justify-content: flex-start;
 }
 
-.archive-consult-chip,
-.archive-profile-link {
+.archive-consult-chip {
   gap: 6px;
   border: 0;
   background: transparent;
@@ -311,24 +484,13 @@
   background: var(--app-accent-soft);
 }
 
-.archive-profile-link {
-  color: var(--app-text-muted);
-}
-
-.message-send-button {
-  grid-column: 2;
-  min-height: 38px;
-  border: 0;
-  padding: 0 14px;
-  color: #ffffff;
-  background: var(--app-accent);
-}
-
 .thinking-process-block {
-  width: min(86%, 460px);
+  width: 100%;
   display: grid;
   justify-self: start;
   gap: 8px;
+  border-bottom: 1px solid var(--app-border-soft);
+  padding-bottom: 10px;
 }
 
 .thinking-process-trigger {
@@ -336,15 +498,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  border: 1px solid rgba(17, 24, 39, 0.1);
-  border-radius: 999px;
-  padding: 9px 12px 9px 14px;
+  gap: 10px;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
   color: var(--app-text-muted);
-  background: #f8fafc;
+  background: transparent;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   text-align: left;
+  cursor: pointer;
 }
 
 .thinking-process-trigger span {
@@ -355,9 +518,9 @@
 }
 
 .thinking-process-trigger strong {
-  color: var(--app-text);
+  color: var(--app-text-muted);
   font-size: 13px;
-  font-weight: 850;
+  font-weight: 600;
 }
 
 .thinking-process-trigger small,
@@ -368,9 +531,20 @@
   white-space: nowrap;
 }
 
+.thinking-process-trigger > .material-icon {
+  margin-left: auto;
+  color: var(--app-text-muted);
+  font-size: 18px;
+.thinking-process-trigger > .material-icon.is-expanded {
+  transform: rotate(90deg);
+}
+
+}
+
 .thinking-process-details {
   display: grid;
   gap: 10px;
+  margin-top: 2px;
   max-height: 220px;
   overflow: auto;
   border: 1px solid var(--app-border);
@@ -407,7 +581,7 @@
 }
 
 .collaboration-process-block {
-  width: min(94%, 560px);
+  width: 100%;
 }
 
 .collaboration-steps {
@@ -494,8 +668,153 @@
   resize: vertical;
 }
 
-.consultation-starter-card .submit-button {
+.consultation-starter-card .consultation-composer-shell,
+.consultation-conversation-composer {
+  width: min(760px, 100%);
+  justify-self: center;
+}
+
+.consultation-composer-shell {
+  display: grid;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid #e1e3e6;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.10), 0 2px 7px rgba(15, 23, 42, 0.06);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.consultation-composer-shell:focus-within {
+  border-color: #c9cdd2;
+  box-shadow: 0 12px 34px rgba(15, 23, 42, 0.12), 0 0 0 3px rgba(17, 24, 39, 0.05);
+}
+
+.consultation-composer-shell > textarea {
   width: 100%;
+  height: 58px;
+  min-height: 58px;
+  max-height: 180px;
+  border: 0;
+  border-radius: 0;
+  padding: 16px 16px 10px;
+  resize: none;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--app-text);
+  background: #ffffff;
+  outline: none;
+}
+
+.consultation-composer-shell > textarea:focus {
+  border: 0;
+  box-shadow: none;
+}
+
+.consultation-composer-shell > textarea::placeholder {
+  color: #a5a8ad;
+}
+
+.consultation-composer-actions {
+  min-height: 50px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 10px 9px;
+}
+
+.starter-composer-actions .starter-archive-row {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.starter-composer-actions .archive-consult-chip {
+  min-height: 34px;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 7px 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.starter-composer-actions .consultation-tag-chip button {
+  flex: 0 0 auto;
+}
+
+.starter-submit-hint {
+  color: #8a8f96;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.consultation-composer-submit {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  color: #ffffff;
+  background: #8c8f94;
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.consultation-composer-submit:not(:disabled):hover {
+  background: #5f6368;
+  transform: translateY(-1px);
+}
+
+.consultation-composer-submit:disabled {
+  color: #f4f4f5;
+  background: #c8cace;
+}
+
+.consultation-composer-submit .material-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.conversation-composer-actions {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.conversation-composer-left {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.conversation-composer-left .message-archive-row,
+.conversation-composer-left .consultation-control-row {
+  flex: 0 0 auto;
+}
+
+.consultation-composer-files.is-compact {
+  grid-column: auto;
+  min-width: auto;
+  max-width: min(360px, 100%);
+  flex: 0 1 auto;
+}
+
+.consultation-composer-files.is-compact .consultation-composer-file-row {
+  padding: 0;
+}
+
+.consultation-composer-files.is-compact .consultation-upload-button {
+  border: 0;
+  border-radius: 999px;
+  color: #34373b;
+  background: #f3f4f6;
+}
+
+.consultation-composer-files.is-compact .consultation-upload-button:not(:disabled):hover {
+  color: #111827;
+  background: #e8eaed;
 }
 
 .consultation-history-panel {
@@ -573,7 +892,214 @@
 .consultation-summary-panel {
   max-width: 960px;
 }
-.consultation-status-banner,
+
+.consultation-records-page {
+  width: min(1080px, 100%);
+  min-height: 100%;
+  display: grid;
+  align-content: start;
+  gap: 22px;
+  margin: 0 auto;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  padding: clamp(22px, 3vw, 34px);
+  background: var(--app-shell);
+}
+
+.consultation-records-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--app-border-soft);
+}
+
+.consultation-records-header h2 {
+  margin: 4px 0 8px;
+  color: var(--app-text);
+  font-size: 26px;
+  line-height: 1.2;
+}
+
+.consultation-records-header p:last-child {
+  max-width: 640px;
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.consultation-record-count {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 7px 11px;
+  color: #49515a;
+  background: #f1f3f5;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.consultation-records-list {
+  display: grid;
+  border: 1px solid var(--app-border-soft);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.consultation-records-list-head,
+.consultation-record-row {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) 110px 140px 20px;
+  align-items: center;
+  gap: 18px;
+}
+
+.consultation-records-list-head {
+  min-height: 40px;
+  padding: 0 16px;
+  color: var(--app-text-muted);
+  background: #f7f8f9;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.consultation-record-row {
+  min-height: 76px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--app-border-soft);
+  color: var(--app-text);
+  text-decoration: none;
+  transition: background 140ms ease;
+}
+
+.consultation-record-row:hover {
+  background: #f7f8f9;
+}
+
+.consultation-record-primary {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.consultation-record-avatar {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  color: #ffffff;
+  background: #202936;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.consultation-record-primary > span:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.consultation-record-primary strong,
+.consultation-record-primary small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.consultation-record-primary strong {
+  font-size: 14px;
+}
+
+.consultation-record-primary small,
+.consultation-record-row time {
+  color: var(--app-text-muted);
+  font-size: 12px;
+}
+
+.consultation-record-status {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 5px 9px;
+  color: #475467;
+  background: #eef1f4;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.consultation-record-status.is-in-progress {
+  color: #11603c;
+  background: #e9f7ef;
+}
+
+.consultation-record-status.is-completed {
+  color: #344054;
+  background: #edf0f3;
+}
+
+.consultation-record-status.is-cancelled {
+  color: #9b342d;
+  background: #fff0ee;
+}
+
+.consultation-record-status.is-paused {
+  color: #7a5710;
+  background: #fff7dd;
+}
+
+.consultation-record-row > .material-icon {
+  color: #98a2b3;
+}
+
+.consultation-records-empty,
+.consultation-records-state {
+  min-height: 300px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  color: var(--app-text-muted);
+  text-align: center;
+}
+
+.consultation-records-empty > span {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: #67717d;
+  background: #f0f2f4;
+}
+
+.consultation-records-empty strong,
+.consultation-records-state strong {
+  color: var(--app-text);
+}
+
+.consultation-records-empty p {
+  max-width: 420px;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.consultation-records-empty a,
+.consultation-records-state button {
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #ffffff;
+  background: var(--app-accent);
+  text-decoration: none;
+  font-weight: 750;
+}
+
+.consultation-records-state.is-error {
+  color: var(--app-danger);
+}
 .consultation-tag-suggestion {
   display: flex;
   align-items: center;
@@ -587,10 +1113,6 @@
   font-size: 0.875rem;
 }
 
-.consultation-status-banner.paused { background: #fff8e8; color: #785b18; }
-.consultation-status-banner.completed,
-.consultation-status-banner.cancelled { background: #f3f4f4; color: #5d6662; }
-.consultation-status-banner span { flex: 1; }
 .consultation-tag-suggestion button,
 .consultation-control-row button { border: 0; border-radius: 0.55rem; padding: 0.45rem 0.7rem; cursor: pointer; }
 .consultation-tag-chip { display: inline-flex; align-items: center; gap: 0.35rem; }
@@ -657,78 +1179,214 @@
 
 .run-governance-actions button:disabled { cursor: wait; opacity: 0.55; }
 
-.consultation-files {
-  display: grid;
-  gap: 0.7rem;
-  margin: 0 1rem;
-  padding: 0.8rem;
-  border: 1px solid var(--app-border-soft);
-  border-radius: 0.8rem;
-  background: #fbfdfc;
-}
-
-.consultation-files-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.consultation-files-header > div,
-.consultation-file-name {
+.consultation-composer-files {
+  grid-column: 1 / -1;
   min-width: 0;
   display: grid;
-  gap: 0.15rem;
+  gap: 6px;
 }
 
-.consultation-files-header small,
-.consultation-file-name small,
-.consultation-files-empty {
+.consultation-composer-file-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 1px 1px 2px;
+}
+
+.consultation-upload-button {
+  min-height: 34px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  padding: 0 10px;
+  color: var(--app-text-soft);
+  background: var(--app-shell);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.consultation-upload-button:not(:disabled):hover {
+  border-color: rgba(17, 24, 39, 0.28);
+  color: var(--app-text);
+  background: var(--app-muted-bg);
+}
+
+.consultation-upload-button:disabled,
+.consultation-upload-chip button:disabled,
+.consultation-message-artifacts button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.consultation-upload-chip {
+  min-width: 0;
+  max-width: 260px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--app-border-soft);
+  border-radius: 8px;
+  padding: 6px 8px;
+  color: var(--app-text);
+  background: var(--app-muted-bg);
+}
+
+.consultation-upload-chip > span:not(.material-icon),
+.consultation-message-artifacts li > span:not(.material-icon) {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.consultation-upload-chip strong,
+.consultation-message-artifacts strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.consultation-upload-chip small,
+.consultation-message-artifacts small {
   color: var(--app-text-muted);
-  font-size: 0.78rem;
+  font-size: 11px;
+}
+
+.consultation-upload-chip button {
+  border: 0;
+  padding: 2px 4px;
+  color: var(--app-text-muted);
+  background: transparent;
+  font-size: 18px;
+  line-height: 1;
 }
 
 .consultation-file-input { display: none; }
+.consultation-files-error { margin: 0; color: #9b342d; font-size: 0.82rem; }
 
-.consultation-file-list {
+.consultation-message-artifacts {
   display: grid;
-  gap: 0.45rem;
-  margin: 0;
+  gap: 7px;
+  margin: 6px 0 0;
   padding: 0;
   list-style: none;
 }
 
-.consultation-file-list li {
+.consultation-message-artifacts li {
+  min-width: 0;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.55rem;
-  padding-top: 0.45rem;
-  border-top: 1px solid var(--app-border-soft);
+  gap: 9px;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #f7f7f7;
 }
 
-.consultation-file-kind {
+.consultation-message-artifacts .material-icon {
+  color: var(--app-text-muted);
+}
+
+.consultation-message-artifacts button {
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 8px;
+  color: var(--app-accent);
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.consultation-message-artifacts button:not(:disabled):hover { background: var(--app-accent-soft); }
+
+.message-send-button.is-stop {
+  border: 1px solid var(--app-border);
+  color: var(--app-text);
+  background: var(--app-shell);
+}
+
+.message-stop-icon {
+  width: 12px;
+  height: 12px;
+  display: inline-block;
+  border-radius: 3px;
+  background: currentColor;
+}
+
+@media (max-width: 640px) {
+  .consultation-tag-suggestion,
+  .run-governance-status { align-items: flex-start; flex-direction: column; }
+  .consultation-upload-chip { max-width: 220px; }
+  .consultation-chat-stream { gap: 20px; padding: 10px 2px 20px; }
+  .message-bubble.user { max-width: 88%; }
+  .message-bubble.assistant { padding-inline: 0; }
+  .message-bubble,
+  .assistant-markdown { font-size: 14px; }
+}
+
+.consultation-tag-chip.is-switchable {
+  gap: 2px;
+  padding: 3px 5px 3px 3px;
+}
+
+.consultation-tag-patient-button,
+.consultation-tag-remove-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+}
+
+.consultation-tag-patient-button {
+  min-width: 0;
+  gap: 6px;
   border-radius: 999px;
-  padding: 0.2rem 0.45rem;
-  color: #365c4d;
-  background: #e7f3ed;
-  font-size: 0.72rem;
+  padding: 5px 7px;
+  font-size: 13px;
   font-weight: 800;
 }
 
-.consultation-file-kind.artifact { color: #674d18; background: #fff1c9; }
-.consultation-file-name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.consultation-file-list button { border: 0; color: var(--app-accent); background: transparent; cursor: pointer; }
-.consultation-file-list button.danger { color: #9b342d; }
-.consultation-file-list button:disabled { cursor: wait; opacity: 0.55; }
-.consultation-files-error { margin: 0; color: #9b342d; font-size: 0.82rem; }
-.consultation-files-empty { margin: 0; }
+.consultation-tag-patient-button:hover {
+  background: rgba(17, 24, 39, 0.06);
+}
 
-@media (max-width: 640px) {
-  .consultation-status-banner,
-  .consultation-tag-suggestion,
-  .run-governance-status { align-items: flex-start; flex-direction: column; }
-  .consultation-files-header { align-items: flex-start; }
-  .consultation-file-list li { grid-template-columns: auto minmax(0, 1fr); }
-  .consultation-file-list li button { justify-self: start; }
+.consultation-tag-patient-button .material-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.consultation-tag-remove-button {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 0;
+}
+
+.consultation-tag-remove-button:hover {
+  color: var(--app-danger);
+  background: rgba(182, 69, 59, 0.1);
+}
+
+.consultation-tag-remove-button .material-icon {
+  width: 17px;
+  height: 17px;
+}
+
+.consultation-tag-patient-button:disabled,
+.consultation-tag-remove-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }

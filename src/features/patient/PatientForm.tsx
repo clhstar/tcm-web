@@ -74,24 +74,28 @@ function PatientFormFields({ patient, submitLabel, onCancel, onSubmit }: Patient
 
   return (
     <form className="patient-form" onSubmit={handleSubmit}>
-      <label htmlFor="patient-name">姓名</label>
-      <input
-        id="patient-name"
-        value={form.name}
-        onChange={(event) => updateField('name', event.target.value)}
-        required
-      />
+      <div className="patient-form-field">
+        <label htmlFor="patient-name">姓名</label>
+        <input
+          id="patient-name"
+          value={form.name}
+          onChange={(event) => updateField('name', event.target.value)}
+          required
+        />
+      </div>
 
-      <label htmlFor="patient-phone">手机号</label>
-      <input
-        id="patient-phone"
-        value={form.phone}
-        onChange={(event) => updateField('phone', event.target.value)}
-        required
-      />
+      <div className="patient-form-field">
+        <label htmlFor="patient-phone">手机号</label>
+        <input
+          id="patient-phone"
+          value={form.phone}
+          onChange={(event) => updateField('phone', event.target.value)}
+          required
+        />
+      </div>
 
       <div className="form-grid">
-        <div>
+        <div className="patient-form-field">
           <label htmlFor="patient-gender">性别</label>
           <select
             id="patient-gender"
@@ -104,7 +108,7 @@ function PatientFormFields({ patient, submitLabel, onCancel, onSubmit }: Patient
           </select>
         </div>
 
-        <div>
+        <div className="patient-form-field">
           <label htmlFor="patient-birthday">出生日期</label>
           <input
             id="patient-birthday"

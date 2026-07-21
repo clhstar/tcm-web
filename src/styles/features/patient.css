@@ -22,6 +22,32 @@
   overflow: visible;
 }
 
+.patient-focus-panel.my-route {
+  align-content: start;
+  overflow: visible;
+}
+
+.patient-form {
+  width: min(760px, 100%);
+  align-content: start;
+  gap: 16px;
+}
+
+.patient-form-field {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.patient-form input,
+.patient-form select {
+  min-height: 46px;
+}
+
+.patient-form .form-actions {
+  margin-top: 4px;
+}
+
 .patient-search {
   display: grid;
   gap: 8px;

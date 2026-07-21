@@ -1,152 +1,114 @@
-import { useEffect, useRef, useState, type ChangeEvent } from 'react'
-import {
-  deleteConsultationFile,
-  downloadConsultationFile,
-  listConsultationFiles,
-  uploadConsultationFile,
-  type ConversationFile,
-} from '../../api/consultation'
+import { useRef, type ChangeEvent } from 'react'
+import type { ConversationFile } from '../../api/consultation'
 import { MaterialIcon } from '../../components/MaterialIcon'
-
-type ConsultationFilesPanelProps = {
-  consultationId: number
-  disabled: boolean
-  refreshKey: string
-}
 
 const ACCEPTED_FILES = '.txt,.md,.json,.csv,.pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg'
 
-export function ConsultationFilesPanel({
-  consultationId,
-  disabled,
-  refreshKey,
-}: ConsultationFilesPanelProps) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [files, setFiles] = useState<ConversationFile[]>([])
-  const [isBusy, setIsBusy] = useState(true)
-  const [error, setError] = useState('')
+type ConsultationComposerFilesProps = {
+  files: ConversationFile[]
+  disabled: boolean
+  isBusy: boolean
+  error: string
+  compact?: boolean
+  onUpload: (file: File) => Promise<void>
+  onRemove: (file: ConversationFile) => Promise<void>
+}
 
-  useEffect(() => {
-    let active = true
-    void listConsultationFiles(consultationId)
-      .then((items) => {
-        if (active) {
-          setFiles(items)
-          setError('')
-        }
-      })
-      .catch((reason: unknown) => {
-        if (active) setError(messageOf(reason))
-      })
-      .finally(() => {
-        if (active) setIsBusy(false)
-      })
-    return () => {
-      active = false
-    }
-  }, [consultationId, refreshKey])
+export function ConsultationComposerFiles({
+  files,
+  disabled,
+  isBusy,
+  error,
+  compact = false,
+  onUpload,
+  onRemove,
+}: ConsultationComposerFilesProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
 
   async function handleUpload(event: ChangeEvent<HTMLInputElement>) {
     const selected = event.target.files?.[0]
     event.target.value = ''
-    if (!selected) return
-    setIsBusy(true)
-    setError('')
-    try {
-      await uploadConsultationFile(consultationId, selected)
-      setFiles(await listConsultationFiles(consultationId))
-    } catch (reason) {
-      setError(messageOf(reason))
-    } finally {
-      setIsBusy(false)
-    }
-  }
-
-  async function handleDelete(file: ConversationFile) {
-    setIsBusy(true)
-    setError('')
-    try {
-      await deleteConsultationFile(consultationId, file.fileId)
-      setFiles((current) => current.filter((item) => item.fileId !== file.fileId))
-    } catch (reason) {
-      setError(messageOf(reason))
-    } finally {
-      setIsBusy(false)
-    }
-  }
-
-  async function handleDownload(file: ConversationFile) {
-    setIsBusy(true)
-    setError('')
-    try {
-      const download = await downloadConsultationFile(consultationId, file.fileId)
-      const url = URL.createObjectURL(download.blob)
-      const anchor = document.createElement('a')
-      anchor.href = url
-      anchor.download = download.filename || file.name
-      anchor.click()
-      URL.revokeObjectURL(url)
-    } catch (reason) {
-      setError(messageOf(reason))
-    } finally {
-      setIsBusy(false)
-    }
+    if (selected) await onUpload(selected)
   }
 
   return (
-    <section className="consultation-files" aria-label="资料与产物">
-      <div className="consultation-files-header">
-        <div>
-          <strong>资料与产物</strong>
-          <small>上传资料保存在当前对话的隔离工作区</small>
-        </div>
+    <div className={`consultation-composer-files${compact ? ' is-compact' : ''}`} aria-label="对话附件">
+      <div className="consultation-composer-file-row">
         <button
           type="button"
-          className="ghost-button"
+          className="consultation-upload-button"
+          aria-label="上传文件"
+          aria-busy={isBusy}
           disabled={disabled || isBusy}
           onClick={() => inputRef.current?.click()}
         >
           <MaterialIcon name="attachFile" />
-          上传文件
+          {isBusy ? '正在同步' : compact ? '文件' : '上传文件'}
         </button>
-        <input
-          ref={inputRef}
-          className="consultation-file-input"
-          type="file"
-          accept={ACCEPTED_FILES}
-          onChange={(event) => void handleUpload(event)}
-        />
+        {files.map((file) => (
+          <span className="consultation-upload-chip" key={file.fileId} title={file.path}>
+            <MaterialIcon name="description" />
+            <span>
+              <strong>{file.name}</strong>
+              <small>{formatFileSize(file.sizeBytes)}</small>
+            </span>
+            <button
+              type="button"
+              aria-label={`删除 ${file.name}`}
+              disabled={disabled || isBusy}
+              onClick={() => void onRemove(file)}
+            >
+              ×
+            </button>
+          </span>
+        ))}
       </div>
       {error ? <p className="consultation-files-error" role="alert">{error}</p> : null}
-      {files.length > 0 ? (
-        <ul className="consultation-file-list">
-          {files.map((file) => (
-            <li key={file.fileId}>
-              <span className={`consultation-file-kind ${file.kind}`}>
-                {file.kind === 'artifact' ? '产物' : '上传'}
-              </span>
-              <span className="consultation-file-name" title={file.path}>
-                <strong>{file.name}</strong>
-                <small>{formatFileSize(file.sizeBytes)}</small>
-              </span>
-              <button type="button" disabled={isBusy} onClick={() => void handleDownload(file)}>
-                下载
-              </button>
-              <button
-                type="button"
-                className="danger"
-                disabled={disabled || isBusy}
-                onClick={() => void handleDelete(file)}
-              >
-                删除
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="consultation-files-empty">{isBusy ? '正在同步文件…' : '尚未上传资料或生成产物'}</p>
-      )}
-    </section>
+      <input
+        ref={inputRef}
+        className="consultation-file-input"
+        type="file"
+        aria-label="选择要上传的文件"
+        accept={ACCEPTED_FILES}
+        onChange={(event) => void handleUpload(event)}
+      />
+    </div>
+  )
+}
+
+type ConsultationMessageArtifactsProps = {
+  files: ConversationFile[]
+  isBusy: boolean
+  onDownload: (file: ConversationFile) => Promise<void>
+}
+
+export function ConsultationMessageArtifacts({
+  files,
+  isBusy,
+  onDownload,
+}: ConsultationMessageArtifactsProps) {
+  if (files.length === 0) return null
+
+  return (
+    <ul className="consultation-message-artifacts" aria-label="回复中的可下载文件">
+      {files.map((file) => (
+        <li key={file.fileId}>
+          <MaterialIcon name="description" />
+          <span>
+            <strong>{file.name}</strong>
+            <small>{formatFileSize(file.sizeBytes)}</small>
+          </span>
+          <button
+            type="button"
+            disabled={isBusy}
+            aria-label={`下载 ${file.name}`}
+            onClick={() => void onDownload(file)}
+          >
+            下载
+          </button>
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -154,8 +116,4 @@ function formatFileSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
-function messageOf(reason: unknown) {
-  return reason instanceof Error ? reason.message : '文件操作失败，请稍后重试。'
 }

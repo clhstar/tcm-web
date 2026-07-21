@@ -9,6 +9,9 @@ const PatientIntakeWorkspace = lazy(() =>
     default: module.PatientIntakeWorkspace,
   })),
 )
+const ConsultationRecordsPage = lazy(() =>
+  import('../features/consultation/ConsultationRecordsPage').then((module) => ({ default: module.ConsultationRecordsPage })),
+)
 const PatientDirectoryPage = lazy(() =>
   import('../features/patient/pages/PatientDirectoryPage').then((module) => ({ default: module.PatientDirectoryPage })),
 )
@@ -49,8 +52,9 @@ export function AppRouter() {
           <Route path="consultation" element={<LazyRoute><PatientIntakeWorkspace view="chat" /></LazyRoute>} />
           <Route path="consultation/new" element={<LazyRoute><PatientIntakeWorkspace view="chat" /></LazyRoute>} />
           <Route path="consultation/:consultationId" element={<LazyRoute><PatientIntakeWorkspace view="chat" /></LazyRoute>} />
-          <Route path="history" element={<LazyRoute><PatientIntakeWorkspace view="history" /></LazyRoute>} />
-          <Route path="history/:consultationId/summary" element={<LazyRoute><PatientIntakeWorkspace view="summary" /></LazyRoute>} />
+          <Route path="consultation-records" element={<LazyRoute><ConsultationRecordsPage /></LazyRoute>} />
+          <Route path="history" element={<Navigate to="/consultation-records" replace />} />
+          <Route path="history/:consultationId/summary" element={<Navigate to="/consultation-records" replace />} />
           <Route path="summary" element={<LazyRoute><PatientIntakeWorkspace view="summary" /></LazyRoute>} />
           <Route path="patients" element={<LazyRoute><PatientDirectoryPage /></LazyRoute>} />
           <Route path="patients/new" element={<LazyRoute><PatientCreatePage /></LazyRoute>} />

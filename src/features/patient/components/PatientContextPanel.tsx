@@ -34,15 +34,17 @@ export function PatientContextPanel({
           <span>{patient ? genderLabel(patient.gender) : '档案未绑定'}{age !== null ? ` · ${age}岁` : ''}</span>
         </div>
       </div>
-      <dl className="context-metrics">
-        <div><dt>当前状态</dt><dd>{consultation?.statusName || (patient ? '待创建问诊' : '未选择')}</dd></div>
-        <div><dt>历史问诊</dt><dd>{patient ? `${consultationCount} 条` : '-'}</dd></div>
-        <div><dt>最后更新</dt><dd>{consultation?.updateTime || consultation?.createTime || '暂无'}</dd></div>
-        <div><dt>主诉</dt><dd>{consultation?.chiefComplaint || '未记录'}</dd></div>
-      </dl>
+      {consultation ? (
+        <dl className="context-metrics">
+          <div><dt>当前状态</dt><dd>{consultation.statusName || '普通对话'}</dd></div>
+          <div><dt>历史问诊</dt><dd>{patient ? `${consultationCount} 条` : '-'}</dd></div>
+          <div><dt>最后更新</dt><dd>{consultation.updateTime || consultation.createTime || '暂无'}</dd></div>
+          <div><dt>主诉</dt><dd>{consultation.chiefComplaint || '未记录'}</dd></div>
+        </dl>
+      ) : null}
       <div className="context-actions">
-        <button type="button" className="ghost-button" onClick={onOpenArchiveSheet}><MaterialIcon name="swapHoriz" />切换患者</button>
-        <button type="button" className="ghost-button" onClick={onOpenProfile} disabled={!patient}><MaterialIcon name="visibility" />查看档案</button>
+        <button type="button" className="ghost-button" onClick={onOpenArchiveSheet}>切换患者</button>
+        <button type="button" className="ghost-button" onClick={onOpenProfile} disabled={!patient}>查看档案</button>
         {consultation ? (
           <button type="button" className="submit-button compact" onClick={onStartNew} disabled={isLoading}><MaterialIcon name="add" />新建对话</button>
         ) : null}

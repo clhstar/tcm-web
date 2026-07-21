@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useLocation, useNavigate, useParams } from 'react-router'
 import {
   completeConsultation,
@@ -14,14 +15,12 @@ import {
 } from '../../api/consultation'
 import { getPatient, type Patient } from '../../api/patient'
 import { ConsultationChatPanel } from '../consultation/ConsultationChatPanel'
-import { ConsultationHistoryPanel } from '../consultation/ConsultationHistoryPanel'
+import { conversationKeys } from '../consultation/conversationQueries'
 import { ConsultationSummaryPanel } from '../consultation/ConsultationSummaryPanel'
 import { useConsultationStream } from '../consultation/stream/useConsultationStream'
 import { MaterialIcon } from '../../components/MaterialIcon'
 import { useNotification } from '../../components/notificationContext'
 import { ArchiveSheet } from './components/ArchiveSheet'
-import { PanelHeading } from '../../shared/ui/PanelHeading'
-import { PatientContextPanel } from './components/PatientContextPanel'
 import { usePatients } from './patientQueries'
 import {
   applyConsultationContext,
@@ -32,7 +31,7 @@ import {
   type ConsultationWorkspaceState,
 } from './consultationWorkspaceState'
 
-export type WorkspaceView = 'chat' | 'history' | 'summary'
+export type WorkspaceView = 'chat' | 'summary'
 type ConsultationMutationKind = 'stream' | 'complete' | 'pause' | 'cancel'
 type ConsultationMutationOwner = {
   id: number
@@ -49,6 +48,7 @@ type PatientIntakeWorkspaceProps = {
 }
 
 export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspaceProps) {
+  const queryClient = useQueryClient()
   const location = useLocation()
   const navigate = useNavigate()
   const routeConsultationId = readPositiveId(useParams().consultationId)
@@ -61,7 +61,6 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
 
   const [chiefComplaint, setChiefComplaint] = useState('')
   const [isDraftingConsultation, setIsDraftingConsultation] = useState(false)
-  const [consultations, setConsultations] = useState<Consultation[]>([])
   const [activeConsultation, setActiveConsultation] = useState<Consultation | null>(null)
   const [messageDraft, setMessageDraft] = useState('')
   const [taggedPatient, setTaggedPatient] = useState<Patient | null>(null)
@@ -194,11 +193,7 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
       if (!current || current.id !== activeId) return current
       return mergeConsultationContext(current, context, contextPatient)
     })
-    setConsultations((current) => current.map((consultation) =>
-      consultation.id === activeId
-        ? mergeConsultationContext(consultation, context, contextPatient)
-        : consultation,
-    ))
+    void queryClient.invalidateQueries({ queryKey: conversationKeys.all })
   }
 
   async function loadConversations(
@@ -219,8 +214,6 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
       if (!isCurrentConsultationLoad(generation)) {
         return
       }
-      setConsultations(result.records)
-
       const nextConsultation =
         preferredConsultation ??
         result.records.find((item) => item.id === activeConsultationIdRef.current) ??
@@ -247,7 +240,6 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
         return
       }
       showConsultationError(loadError instanceof Error ? loadError.message : FALLBACK_CONSULTATION_ERROR)
-      setConsultations([])
       setActiveConsultation(null)
       applyWorkspaceState(emptyConversationState())
       resetConsultationStream()
@@ -284,7 +276,6 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
       setSelectedPatient(patient)
       setActiveConsultation(consultation)
       applyWorkspaceState(restoreConversationState(consultation, patient))
-      setConsultations((current) => upsertConsultation(current, consultation))
       restoreConsultationHistory(consultation.id, historyMessages)
       startRunRecovery(consultation.id)
       setIsDraftingConsultation(false)
@@ -360,11 +351,6 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
     navigate('/patients/new')
   }
 
-  function openPatientProfile(patient: Patient) {
-    setIsArchiveSheetOpen(false)
-    navigate(`/patients/${patient.id}`)
-  }
-
   function openNewConsultationDraft() {
     if (location.pathname !== '/consultation/new') {
       navigate(`/consultation/new?new=${Date.now()}`)
@@ -401,25 +387,6 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
     setTaggedPatient(null)
   }
 
-  function handleSelectConsultation(consultationId: number) {
-    if (
-      activeConsultationIdRef.current === consultationId &&
-      (activeConsultation?.id === consultationId || consultationLoadingRef.current)
-    ) {
-      return
-    }
-    invalidateStreamWork()
-    ++messageLoadGenerationRef.current
-    ++consultationActionGenerationRef.current
-    consultationLoadingRef.current = false
-    messageLoadingRef.current = false
-    invalidateConsultationMutation()
-    setIsMessageLoading(false)
-    setIsCompleting(false)
-    navigate(`/consultation/${consultationId}`)
-    setIsDraftingConsultation(false)
-  }
-
   async function handleStartConsultation() {
     const normalizedComplaint = chiefComplaint.trim()
     if (!normalizedComplaint) {
@@ -447,7 +414,7 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
       setChiefComplaint('')
       setActiveConsultation(nextConsultation)
       setTaggedPatient(explicitTag)
-      setConsultations((current) => upsertConsultation(current, nextConsultation))
+      void queryClient.invalidateQueries({ queryKey: conversationKeys.all })
       resetConsultationStream()
       setIsDraftingConsultation(false)
       navigate(`/consultation/${nextConsultation.id}`, { replace: true })
@@ -707,7 +674,7 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
     if (activeConsultationIdRef.current !== consultationId) return
 
     setActiveConsultation(refreshed)
-    setConsultations((current) => upsertConsultation(current, refreshed))
+    void queryClient.invalidateQueries({ queryKey: conversationKeys.all })
     applyWorkspaceState(restoreConversationState(refreshed, patient))
   }
 
@@ -721,7 +688,6 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
       <section
         className={[
           'workspace-grid',
-          activeView === 'chat' ? 'with-context' : '',
           isConsultationStarter ? 'consultation-starter-grid' : '',
         ].filter(Boolean).join(' ')}
       >
@@ -770,8 +736,6 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
                   onComplete={handleCompleteConsultation}
                   onCancel={handleCancelConsultation}
                   onCancelRun={handleCancelRun}
-                  onOpenPatientProfile={() => selectedPatient && openPatientProfile(selectedPatient)}
-                  canOpenPatientProfile={selectedPatient !== null}
                   onRetryHistory={() => {
                     if (activeConsultation) {
                       void loadMessages(activeConsultation.id)
@@ -782,17 +746,6 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
                   onSend={handleSendMessage}
                 />
               ) : null}
-            </div>
-          ) : null}
-
-          {activeView === 'history' ? (
-            <div className="consultation-workspace">
-              <ConsultationHistoryPanel
-                consultations={consultations}
-                activeConsultationId={activeConsultation?.id ?? null}
-                isLoading={isConsultationLoading}
-                onSelect={handleSelectConsultation}
-              />
             </div>
           ) : null}
 
@@ -809,17 +762,6 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
 
         </section>
 
-        {activeView === 'chat' ? (
-          <PatientContextPanel
-            patient={selectedPatient}
-            consultation={activeConsultation}
-            consultationCount={consultations.length}
-            isLoading={isConsultationLoading || isMessageLoading}
-            onOpenArchiveSheet={() => setIsArchiveSheetOpen(true)}
-            onOpenProfile={() => selectedPatient && openPatientProfile(selectedPatient)}
-            onStartNew={openNewConsultationDraft}
-          />
-        ) : null}
       </section>
       <ArchiveSheet
         isOpen={isArchiveSheetOpen}
@@ -854,44 +796,130 @@ function ConsultationStarter({
   onRemoveTag: () => void
   onSubmit: () => void
 }) {
+  const chiefComplaintRef = useRef<HTMLTextAreaElement>(null)
+  const submitLabel = isCreating ? '创建中...' : taggedPatient ? '开始问诊' : '发送消息'
+
+  function selectSuggestion(prompt: string) {
+    onChange(prompt)
+    chiefComplaintRef.current?.focus()
+  }
+
   return (
     <section className="consultation-card consultation-starter-card" aria-label="新建对话">
-      <PanelHeading title="新建对话" description="不添加标签时是普通对话；只有显式添加患者标签才会开始问诊。" />
-      <div className="consultation-intake-card">
-        <label htmlFor="chief-complaint">第一条消息</label>
+      <h2 className="visually-hidden">新建对话</h2>
+      <div className="consultation-starter-welcome">
+        <span className="consultation-starter-mark" aria-hidden="true">
+          <MaterialIcon name="medicalServices" />
+        </span>
+        <h3>今天想咨询什么？</h3>
+        <div className="consultation-suggestion-grid" aria-label="常用问诊方向">
+          {CONSULTATION_STARTER_SUGGESTIONS.map((suggestion) => (
+            <button
+              key={suggestion.title}
+              type="button"
+              className="consultation-suggestion-card"
+              aria-label={suggestion.title}
+              onClick={() => selectSuggestion(suggestion.prompt)}
+            >
+              <MaterialIcon name={suggestion.icon} />
+              <span>
+                <strong>{suggestion.title}</strong>
+                <small>{suggestion.description}</small>
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <form
+        className="consultation-intake-card consultation-composer-shell"
+        onSubmit={(event) => {
+          event.preventDefault()
+          onSubmit()
+        }}
+      >
+        <label className="visually-hidden" htmlFor="chief-complaint">
+          {taggedPatient ? '患者主诉' : '消息'}
+        </label>
         <textarea
+          ref={chiefComplaintRef}
           id="chief-complaint"
           value={chiefComplaint}
           onChange={(event) => onChange(event.target.value)}
-          placeholder="例如：最近头痛，口干，晚上睡不好"
+          onKeyDown={(event) => {
+            if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+              event.preventDefault()
+              onSubmit()
+            }
+          }}
+          placeholder={taggedPatient ? '描述患者当前症状或主诉' : '输入你想咨询的问题'}
           rows={4}
         />
-        <div className="starter-archive-row">
-          {taggedPatient ? (
-            <span className="archive-consult-chip consultation-tag-chip">
-              <MaterialIcon name="medicalServices" />问诊·{taggedPatient.name}
-              <button type="button" aria-label="删除本地问诊标签" onClick={onRemoveTag}>×</button>
-            </span>
-          ) : (
-            <button type="button" className="archive-consult-chip" title={archiveLabel} onClick={onOpenArchiveSheet}>
-              <MaterialIcon name="add" />添加问诊标签
-            </button>
-          )}
+        <div className="starter-composer-actions consultation-composer-actions">
+          <div className="starter-archive-row">
+            {taggedPatient ? (
+              <span className="archive-consult-chip consultation-tag-chip is-switchable">
+                <button
+                  type="button"
+                  className="consultation-tag-patient-button"
+                  aria-label={`切换问诊患者，当前${taggedPatient.name}`}
+                  title="点击切换患者"
+                  onClick={onOpenArchiveSheet}
+                >
+                  <MaterialIcon name="medicalServices" />问诊·{taggedPatient.name}
+                </button>
+                <button type="button" className="consultation-tag-remove-button" aria-label="删除本地问诊标签" onClick={onRemoveTag}>
+                  <MaterialIcon name="close" />
+                </button>
+              </span>
+            ) : (
+              <button type="button" className="archive-consult-chip" aria-label="添加问诊标签" title={archiveLabel} onClick={onOpenArchiveSheet}>
+                <MaterialIcon name="add" />问诊
+              </button>
+            )}
+          </div>
+          <span className="starter-submit-hint">Ctrl / ⌘ + Enter</span>
+          <button
+            type="submit"
+            className="starter-submit-button consultation-composer-submit"
+            aria-label={submitLabel}
+            title={submitLabel}
+            disabled={isCreating}
+          >
+            <MaterialIcon name="send" />
+          </button>
         </div>
-        <button type="button" className="submit-button compact" onClick={onSubmit} disabled={isCreating}>
-          <MaterialIcon name="send" />
-          {isCreating ? '创建中...' : '发送主诉'}
-        </button>
-      </div>
+      </form>
     </section>
   )
 }
 
-function upsertConsultation(current: Consultation[], target: Consultation) {
-  const exists = current.some((item) => item.id === target.id)
-  const next = exists ? current.map((item) => (item.id === target.id ? target : item)) : [target, ...current]
-  return [...next].sort((left, right) => (right.updateTime || '').localeCompare(left.updateTime || ''))
-}
+const CONSULTATION_STARTER_SUGGESTIONS = [
+  {
+    icon: 'medicalServices',
+    title: '描述当前症状',
+    description: '症状线索与持续时间',
+    prompt: '我想描述最近出现的症状，请帮我梳理可能的原因和还需要补充的信息。',
+  },
+  {
+    icon: 'history',
+    title: '梳理既往情况',
+    description: '病史、用药与生活习惯',
+    prompt: '我想梳理既往病史、近期用药和生活习惯，请引导我逐项补充。',
+  },
+  {
+    icon: 'factCheck',
+    title: '解读检查报告',
+    description: '理解指标与注意事项',
+    prompt: '我想了解一份检查报告，请告诉我需要提供哪些指标和背景信息。',
+  },
+  {
+    icon: 'chat',
+    title: '开始中医问诊',
+    description: '按中医问诊思路逐步了解',
+    prompt: '请按中医问诊思路逐步询问我的主要不适，并帮我整理症状线索。',
+  },
+] as const
 
 function mergeConsultationContext(
   consultation: Consultation,
