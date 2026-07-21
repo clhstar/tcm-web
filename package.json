@@ -1,11 +1,22 @@
 {
   "name": "tcm-web",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "TCM consultation web and desktop client",
+  "author": "TCM Consultation Team",
   "type": "module",
+  "main": "electron/main.mjs",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "dev": "vite",
+    "dev:desktop": "concurrently --kill-others-on-fail \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && electron electron/main.mjs\"",
     "build": "tsc -b && vite build",
+    "build:desktop": "pnpm build && electron-builder --publish never",
+    "build:desktop:win": "pnpm build && electron-builder --win nsis --x64 --publish never",
+    "build:desktop:mac": "pnpm build && electron-builder --mac dmg zip --x64 --arm64 --publish never",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -31,6 +42,9 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "concurrently": "^10.0.3",
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3",
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
@@ -39,6 +53,56 @@
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.8",
+    "wait-on": "^9.0.10"
+  },
+  "build": {
+    "appId": "com.tcm.consultation.desktop",
+    "productName": "TCM Consultation",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "mac": {
+      "category": "public.app-category.medical",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }

@@ -1,73 +1,50 @@
-# React + TypeScript + Vite
+# TCM Consultation Web/Desktop
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + Vite 8 前端，同时提供浏览器版本和 Electron 桌面版本。桌面端复用同一套 React UI，并通过仅监听 `127.0.0.1` 的本地静态服务器加载页面，使现有后端 CORS 规则继续适用。
 
-Currently, two official plugins are available:
+## 服务地址
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- 本地开发：`.env`
+- 生产 Web 与桌面包：`.env.production`
+- Java API：`http://47.108.172.192:4040`
+- TCM Flow API：`http://47.108.172.192:2027`
 
-## React Compiler
+如服务器地址变化，只修改 `.env.production` 后重新构建即可。
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 开发
 
-## Expanding the ESLint configuration
+在项目目录运行：
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+pnpm dev
+pnpm dev:desktop
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 构建
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+# Web
+pnpm build
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# 当前操作系统的桌面包
+pnpm build:desktop
+
+# Windows x64 NSIS 安装包（在 Windows 上运行）
+pnpm build:desktop:win
+
+# macOS Intel + Apple Silicon DMG/ZIP（在 macOS 上运行）
+pnpm build:desktop:mac
 ```
+
+输出目录为 `release/`。GitHub Actions 工作流会分别在 Windows 和 macOS Runner 上构建，并上传安装包 Artifact。
+
+当前构建默认不签名：Windows 可能显示 SmartScreen 提示，macOS 可能显示 Gatekeeper 提示。正式分发时应在 CI 中配置 Windows 代码签名证书，以及 Apple Developer ID 与 notarization 凭据。
+
+## Electron 安全边界
+
+- `contextIsolation: true`
+- `nodeIntegration: false`
+- Renderer sandbox 开启
+- 默认拒绝权限请求
+- 外部 HTTP/HTTPS 链接交给系统浏览器
+- 打包后页面仅由随机端口的 `127.0.0.1` 静态服务器提供
