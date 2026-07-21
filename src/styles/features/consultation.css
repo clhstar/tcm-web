@@ -475,6 +475,7 @@
   background: transparent;
   font-size: 13px;
   font-weight: 800;
+  line-height: 18px;
 }
 
 .archive-consult-chip {
@@ -1115,6 +1116,12 @@
 
 .consultation-tag-suggestion button,
 .consultation-control-row button { border: 0; border-radius: 0.55rem; padding: 0.45rem 0.7rem; cursor: pointer; }
+.consultation-control-row button {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 18px;
+}
 .consultation-tag-chip { display: inline-flex; align-items: center; gap: 0.35rem; }
 .consultation-tag-chip > button { border: 0; background: transparent; font-size: 1.2rem; cursor: pointer; line-height: 1; }
 .consultation-tag-chip > button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }

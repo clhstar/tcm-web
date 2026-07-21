@@ -1,7 +1,7 @@
 {
   "name": "tcm-web",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "TCM consultation web and desktop client",
   "author": "TCM Consultation Team",
   "type": "module",
@@ -72,7 +72,8 @@
     "publish": {
       "provider": "github",
       "owner": "clhstar",
-      "repo": "tcm-web"
+      "repo": "tcm-web",
+      "releaseType": "release"
     },
     "artifactName": "TCM-Consultation-${version}-${os}-${arch}.${ext}",
     "mac": {
