@@ -128,7 +128,7 @@ async function createMainWindow(rendererUrl) {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
-      preload: path.join(currentDirectory, 'preload.mjs'),
+      preload: path.join(currentDirectory, 'preload.cjs'),
       sandbox: true,
     },
   })
