@@ -1123,7 +1123,7 @@
   line-height: 18px;
 }
 .consultation-tag-chip { display: inline-flex; align-items: center; gap: 0.35rem; }
-.consultation-tag-chip > button { border: 0; background: transparent; font-size: 1.2rem; cursor: pointer; line-height: 1; }
+.consultation-tag-chip > button { border: 0; background: transparent; cursor: pointer; line-height: 1; }
 .consultation-tag-chip > button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 .consultation-control-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .consultation-control-row button:last-child { color: #9b342d; }
