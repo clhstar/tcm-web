@@ -160,15 +160,12 @@ function installFetchRouter(options: FetchRouterOptions = {}) {
           version: '0.0.1-SNAPSHOT',
           runtimeVersion: '21.0.8',
           startedAt: '2026-07-22T08:00:00Z',
+          python: {
+            status: 'online',
+            version: '2.3.0',
+            startedAt: '2026-07-22T08:00:00+00:00',
+          },
         },
-      })
-    }
-    if (method === 'GET' && url.pathname === '/health') {
-      return jsonResponse({
-        status: 'ok',
-        version: '2.3.0',
-        architecture: 'tcm-flow',
-        started_at: '2026-07-22T08:00:00+00:00',
       })
     }
     if (method === 'POST' && url.pathname === '/api/conversations') {
