@@ -90,7 +90,6 @@ export function AppSidebar({ isCollapsed, userName, onLogout, onToggle }: AppSid
       <section className="sidebar-conversations" aria-labelledby="sidebar-conversations-title">
         <div className="sidebar-section-label">
           <span id="sidebar-conversations-title">对话记录</span>
-          {conversations.length > 0 ? <small>{conversations.length}</small> : null}
         </div>
         <nav className="sidebar-conversation-list" aria-label="最近对话">
           {conversations.map((consultation) => {

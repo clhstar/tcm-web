@@ -213,7 +213,7 @@ function configureDesktopUpdater() {
     for (const window of BrowserWindow.getAllWindows()) window.setProgressBar(-1)
     if (isRestartingForUpdate) return
     isRestartingForUpdate = true
-    setTimeout(() => autoUpdater.quitAndInstall(false, true), 1200)
+    setTimeout(() => autoUpdater.quitAndInstall(true, true), 1200)
   })
   autoUpdater.on('error', (error) => {
     for (const window of BrowserWindow.getAllWindows()) window.setProgressBar(-1)
