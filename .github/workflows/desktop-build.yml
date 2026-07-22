@@ -46,10 +46,45 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Trust macOS test signing certificate
+        if: ${{ matrix.os == 'macos-latest' }}
+        shell: bash
+        run: |
+          printf '%s' "$CSC_LINK" | openssl base64 -d -A -out "$RUNNER_TEMP/tcm-test-signing.p12"
+          openssl pkcs12 \
+            -in "$RUNNER_TEMP/tcm-test-signing.p12" \
+            -clcerts \
+            -nokeys \
+            -passin env:CSC_KEY_PASSWORD \
+            -out "$RUNNER_TEMP/tcm-test-signing.pem"
+          sudo security add-trusted-cert \
+            -d \
+            -r trustAsRoot \
+            -k /Library/Keychains/System.keychain \
+            "$RUNNER_TEMP/tcm-test-signing.pem"
+        env:
+          CSC_LINK: ${{ secrets.MAC_TEST_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_TEST_CSC_KEY_PASSWORD }}
       - name: Build desktop package
         run: pnpm run ${{ matrix.command }}
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ matrix.os == 'macos-latest' && 'true' || 'false' }}
+          CSC_LINK: ${{ matrix.os == 'macos-latest' && secrets.MAC_TEST_CSC_LINK || '' }}
+          CSC_KEY_PASSWORD: ${{ matrix.os == 'macos-latest' && secrets.MAC_TEST_CSC_KEY_PASSWORD || '' }}
+          CSC_NAME: ${{ matrix.os == 'macos-latest' && 'TCM Consultation Test Updater' || '' }}
+      - name: Verify macOS code signature
+        if: ${{ matrix.os == 'macos-latest' }}
+        shell: bash
+        run: |
+          apps=()
+          while IFS= read -r -d '' app; do
+            apps+=("$app")
+          done < <(find release -type d -name '*.app' -print0)
+          test "${#apps[@]}" -gt 0
+          for app in "${apps[@]}"; do
+            codesign --verify --deep --strict --verbose=2 "$app"
+            codesign --display --verbose=4 "$app" 2>&1 | grep -F 'Authority=TCM Consultation Test Updater'
+          done
       - name: Upload workflow artifact
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
