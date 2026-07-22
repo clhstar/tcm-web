@@ -141,7 +141,7 @@ export function AppSidebar({ isCollapsed, userName, onLogout, onToggle }: AppSid
           onClick={() => setIsAccountMenuOpen((current) => !current)}
         >
           <span className="account-avatar" aria-hidden="true">{readAvatarLabel(userName)}</span>
-          <span><strong>{userName}</strong><small>tcm-flow 在线</small></span>
+          <span><strong>{userName}</strong></span>
           <MaterialIcon name="settings" />
         </button>
       </div>
