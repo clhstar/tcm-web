@@ -458,3 +458,20 @@ The annotated source shows that `新对话` used a visibly larger icon, text sca
 - Automated verification: 13 test files and 118 tests passed; ESLint and production build passed.
 
 final result: passed
+
+## 2026-07-23 Typography weight and action-label QA
+
+- Source visual truth: `C:/Users/25430/AppData/Local/Temp/codex-clipboard-4a1eefaa-08fa-46a2-bbb2-1191ff8a5f40.png` and `C:/Users/25430/AppData/Local/Temp/codex-clipboard-ac2bf928-5d28-4969-890b-988b998b4ba1.png`.
+- Implementation evidence: `.design-qa/implementation-settings-menu.png`, `.design-qa/implementation-patient-page.png`, and `.design-qa/implementation-patient-buttons.png`.
+- Combined comparison evidence: `.design-qa/comparison-settings-menu.png` and `.design-qa/comparison-patient-buttons.png`.
+- Viewport and density: 1424 x 881 CSS px at device scale factor 1. The settings source and implementation are both 1424 x 881 and were compared without scaling. The patient-button source is 224 x 60; the implementation focused crop is 225 x 65 and was compared without scaling.
+- State: authenticated desktop app, settings page with the account menu open, and patient directory with both search actions visible.
+- Full-view evidence: account-menu location, layout, spacing, icons, colors, borders, and interaction behavior remain unchanged; menu labels and account text now render at 14px / 600.
+- Focused-region evidence: patient search and create actions changed from the initial computed 16px / 600 to 14px / 600 and now match each other and adjacent UI text.
+- Typography: the existing Chinese sans-serif family, fallback stack, line height, letter spacing, antialiasing, wrapping, and truncation remain unchanged. Explicit emphasis is limited to 500, 600, and 700; ordinary text remains 400.
+- Spacing/layout, colors/tokens, icons/assets, and copy remain unchanged. No image assets were introduced.
+- Comparison history: the initial rendered check found both patient actions at 16px / 600; the common action rule was corrected to the 14px body-size token; the second capture confirmed both at 14px / 600. Account menu items were confirmed at 14px / 600.
+- Validation: TypeScript, ESLint, and Vite production build passed. Account-menu interaction and route rendering were checked. Browser console had no warnings or errors. Backend fetch failures visible in the local environment are outside this visual scope.
+- Findings: no actionable P0, P1, or P2 differences remain for the requested typography scope.
+
+final result: passed

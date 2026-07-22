@@ -107,7 +107,7 @@
 .dashboard-brand strong {
   color: var(--app-text);
   font-size: var(--font-size-heading);
-  font-weight: 850;
+  font-weight: var(--font-weight-bold);
 }
 
 .dashboard-brand span {
@@ -133,7 +133,7 @@
   color: var(--app-text);
   background: var(--app-shell);
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
-  font-weight: 850;
+  font-weight: var(--font-weight-bold);
 }
 
 .new-chat-button:hover {
@@ -181,7 +181,7 @@
 
 .dashboard-nav-item strong {
   font-size: var(--font-size-body);
-  font-weight: 820;
+  font-weight: var(--font-weight-semibold);
 }
 
 .dashboard-nav-item small {
@@ -239,7 +239,7 @@
   color: #ffffff;
   background: #263241;
   font-size: var(--font-size-body);
-  font-weight: 850;
+  font-weight: var(--font-weight-bold);
 }
 
 .sidebar-account-button > span:nth-child(2),
@@ -261,7 +261,7 @@
 .account-menu-profile strong {
   color: var(--app-text);
   font-size: var(--font-size-body);
-  font-weight: 820;
+  font-weight: var(--font-weight-semibold);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -305,6 +305,8 @@
   padding: 8px 10px;
   color: var(--app-text);
   background: transparent;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
   text-align: left;
 }
 
@@ -348,7 +350,7 @@
 .account-menu-version-heading > span {
   color: var(--app-text);
   font-size: var(--font-size-caption);
-  font-weight: 760;
+  font-weight: var(--font-weight-semibold);
 }
 
 .account-menu-version-heading small {
@@ -488,7 +490,7 @@
   margin: 0 0 5px;
   color: var(--app-text-muted);
   font-size: var(--font-size-body);
-  font-weight: 800;
+  font-weight: var(--font-weight-semibold);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -497,7 +499,7 @@
   margin: 0;
   color: var(--app-text);
   font-size: var(--font-size-page-title);
-  font-weight: 850;
+  font-weight: var(--font-weight-bold);
   line-height: 1.16;
 }
 
@@ -508,7 +510,7 @@
   gap: 0;
   color: #667085;
   font-size: var(--font-size-body);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   line-height: 1.4;
 }
 
@@ -549,7 +551,7 @@
 .page-breadcrumb [aria-current='page'] {
   min-width: 0;
   color: #344054;
-  font-weight: 800;
+  font-weight: var(--font-weight-semibold);
 }
 
 .topbar-actions {
@@ -583,7 +585,7 @@
 .topbar-user {
   gap: 9px;
   padding: 0 13px;
-  font-weight: 800;
+  font-weight: var(--font-weight-semibold);
 }
 
 .icon-button {
@@ -622,7 +624,7 @@
 
 .dashboard-brand strong {
   font-size: var(--font-size-lead);
-  font-weight: 760;
+  font-weight: var(--font-weight-semibold);
 }
 
 .dashboard-nav {
@@ -640,7 +642,7 @@
   background: transparent;
   box-shadow: none;
   font-size: var(--font-size-body);
-  font-weight: 650;
+  font-weight: var(--font-weight-semibold);
 }
 
 .new-chat-button:hover {
@@ -671,7 +673,7 @@
 
 .dashboard-nav-item strong {
   font-size: var(--font-size-body);
-  font-weight: 650;
+  font-weight: var(--font-weight-semibold);
 }
 
 .dashboard-nav-item small {
@@ -807,7 +809,7 @@
 
 .desktop-update-copy strong {
   font-size: var(--font-size-caption);
-  font-weight: 720;
+  font-weight: var(--font-weight-bold);
 }
 
 .desktop-update-copy small {

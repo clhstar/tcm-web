@@ -47,7 +47,7 @@
     color: var(--app-text-muted);
     text-decoration: none;
     font-size: var(--font-size-caption);
-    font-weight: 800;
+    font-weight: var(--font-weight-semibold);
   }
 
   .mobile-nav-item.active {
