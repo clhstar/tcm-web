@@ -113,7 +113,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
             autoComplete="username"
             value={form.username}
             onChange={(event) => updateField('username', event.target.value)}
-            placeholder="doctor_demo"
+            placeholder="请输入账号"
             required
           />
 
@@ -140,7 +140,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
             autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
             value={form.password}
             onChange={(event) => updateField('password', event.target.value)}
-            placeholder="至少 8 位"
+            placeholder="请输入密码"
             required
           />
 
