@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router'
 import { navigationItems } from '../app/navigation'
 import { MaterialIcon } from '../components/MaterialIcon'
+import { FRONTEND_VERSION } from '../config/global'
 import { useRecentConversations } from '../features/consultation/conversationQueries'
 import { DesktopUpdateNotice } from '../features/desktop-update/DesktopUpdateNotice'
+import { useSystemVersions } from '../features/system-version/systemVersionQueries'
 
 const sidebarNavigationItems = navigationItems.filter(
   (item) => item.to !== '/consultation' && item.to !== '/settings',
@@ -23,6 +25,18 @@ export function AppSidebar({ isCollapsed, userName, onLogout, onToggle }: AppSid
   const conversations = conversationQuery.data?.records ?? []
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false)
   const accountMenuRef = useRef<HTMLDivElement>(null)
+  const systemVersionQuery = useSystemVersions(isAccountMenuOpen)
+  const versionEntries: Array<VersionDetails & { label: string }> = [
+    { label: '前端', status: 'online' as const, version: FRONTEND_VERSION },
+    { label: 'Java', ...readRemoteVersion(systemVersionQuery.data?.java) },
+    { label: 'Python', ...readRemoteVersion(systemVersionQuery.data?.python) },
+  ]
+  const onlineServiceCount = versionEntries.filter((entry) => entry.status === 'online').length
+  const serviceSummary = systemVersionQuery.isFetching
+    ? '正在检查服务版本'
+    : systemVersionQuery.data
+      ? `${onlineServiceCount}/3 服务在线`
+      : '点击查看版本状态'
 
   useEffect(() => {
     if (!isAccountMenuOpen) return
@@ -120,9 +134,31 @@ export function AppSidebar({ isCollapsed, userName, onLogout, onToggle }: AppSid
           <div className="sidebar-account-menu" role="menu" aria-label="账户菜单">
             <button type="button" className="account-menu-profile" onClick={() => navigateFromMenu('/settings')}>
               <span className="account-avatar" aria-hidden="true">{readAvatarLabel(userName)}</span>
-              <span><strong>{userName}</strong><small>tcm-flow 在线</small></span>
+              <span><strong>{userName}</strong><small>{serviceSummary}</small></span>
               <MaterialIcon name="chevronRight" />
             </button>
+            <div className="account-menu-divider" />
+            <div className="account-menu-versions" role="group" aria-label="版本信息">
+              <div className="account-menu-version-heading">
+                <span>版本信息</span>
+                <small>{systemVersionQuery.isFetching ? '正在更新' : '每 30 秒更新'}</small>
+              </div>
+              {versionEntries.map((entry) => (
+                <div
+                  className="account-menu-version-row"
+                  key={entry.label}
+                  title={readVersionTitle(entry.startedAt, entry.runtimeVersion)}
+                >
+                  <span className="account-menu-version-service">
+                    <i className={`service-status-dot is-${entry.status}`} aria-hidden="true" />
+                    {entry.label}
+                  </span>
+                  <span className={`account-menu-version-value is-${entry.status}`}>
+                    {readVersionLabel(entry.status, entry.version)}
+                  </span>
+                </div>
+              ))}
+            </div>
             <div className="account-menu-divider" />
             <button type="button" role="menuitem" onClick={() => navigateFromMenu('/settings')}><MaterialIcon name="settings" /><span>系统设置</span></button>
             <div className="account-menu-divider" />
@@ -158,4 +194,38 @@ function isNavigationItemActive(to: string, match: string[], pathname: string) {
 function readAvatarLabel(userName: string) {
   const normalizedName = userName.trim()
   return normalizedName ? normalizedName.slice(0, 1) : '医'
+}
+
+type VersionStatus = 'online' | 'offline' | 'checking'
+type VersionDetails = {
+  status: VersionStatus
+  version?: string
+  runtimeVersion?: string
+  startedAt?: string
+}
+
+function readRemoteVersion(version?: {
+  status: 'online' | 'offline'
+  version?: string
+  runtimeVersion?: string
+  startedAt?: string
+}): VersionDetails {
+  return version ?? { status: 'checking' as const }
+}
+
+function readVersionLabel(status: VersionStatus, version?: string) {
+  if (status === 'checking') return '检查中…'
+  if (status === 'offline') return '无法连接'
+  if (!version) return '在线'
+  return version.startsWith('v') ? version : `v${version}`
+}
+
+function readVersionTitle(startedAt?: string, runtimeVersion?: string) {
+  const details: string[] = []
+  if (runtimeVersion) details.push(`运行时 ${runtimeVersion}`)
+  if (startedAt) {
+    const date = new Date(startedAt)
+    if (!Number.isNaN(date.getTime())) details.push(`服务启动于 ${date.toLocaleString('zh-CN')}`)
+  }
+  return details.join(' · ') || undefined
 }

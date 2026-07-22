@@ -326,6 +326,84 @@
   background: var(--app-border-soft);
 }
 
+.account-menu-versions {
+  display: grid;
+  gap: 7px;
+  padding: 5px 10px 7px;
+}
+
+.account-menu-version-heading,
+.account-menu-version-row,
+.account-menu-version-service {
+  display: flex;
+  align-items: center;
+}
+
+.account-menu-version-heading,
+.account-menu-version-row {
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.account-menu-version-heading > span {
+  color: var(--app-text);
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.account-menu-version-heading small {
+  color: var(--app-text-muted);
+  font-size: 10px;
+}
+
+.account-menu-version-row {
+  min-height: 18px;
+  color: #4b5563;
+  font-size: 11px;
+}
+
+.account-menu-version-service {
+  gap: 7px;
+}
+
+.service-status-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #9ca3af;
+}
+
+.service-status-dot.is-online {
+  background: #22a06b;
+  box-shadow: 0 0 0 2px rgba(34, 160, 107, 0.12);
+}
+
+.service-status-dot.is-offline {
+  background: #d14343;
+  box-shadow: 0 0 0 2px rgba(209, 67, 67, 0.12);
+}
+
+.account-menu-version-value {
+  min-width: 0;
+  color: #344054;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-menu-version-value.is-checking {
+  color: var(--app-text-muted);
+  font-family: inherit;
+}
+
+.account-menu-version-value.is-offline {
+  color: #b42318;
+  font-family: inherit;
+}
+
 .sidebar-collapsed .dashboard-sidebar {
   align-items: center;
   padding-inline: 10px;

@@ -151,6 +151,26 @@ function installFetchRouter(options: FetchRouterOptions = {}) {
     if (method === 'GET' && url.pathname === '/api/conversations/page') {
       return jsonResponse(options.conversationPage ?? emptyConversationPageResponse)
     }
+    if (method === 'GET' && url.pathname === '/api/system/version') {
+      return jsonResponse({
+        code: 200,
+        message: '系统版本获取成功',
+        data: {
+          service: 'tcm-backend',
+          version: '0.0.1-SNAPSHOT',
+          runtimeVersion: '21.0.8',
+          startedAt: '2026-07-22T08:00:00Z',
+        },
+      })
+    }
+    if (method === 'GET' && url.pathname === '/health') {
+      return jsonResponse({
+        status: 'ok',
+        version: '2.3.0',
+        architecture: 'tcm-flow',
+        started_at: '2026-07-22T08:00:00+00:00',
+      })
+    }
     if (method === 'POST' && url.pathname === '/api/conversations') {
       return jsonResponse({ code: 200, message: 'success', data: createdConversation })
     }
@@ -373,6 +393,23 @@ describe('App routes and consultation entry', () => {
     expect(within(savedRecords).getByText('张三 · 记录 #901')).toBeInTheDocument()
     expect(within(savedRecords).queryByText('未绑定患者')).not.toBeInTheDocument()
     expect(window.location.pathname).toBe('/consultation-records')
+  })
+
+  it('shows live frontend, Java, and Python versions in the account menu', async () => {
+    installFetchRouter()
+    const user = userEvent.setup()
+    render(<App />)
+
+    await loginThroughUi(user)
+    await user.click(screen.getByRole('button', { name: '账户菜单' }))
+
+    const versionGroup = screen.getByRole('group', { name: '版本信息' })
+    expect(within(versionGroup).getByText('前端')).toBeInTheDocument()
+    expect(within(versionGroup).getByText('Java')).toBeInTheDocument()
+    expect(within(versionGroup).getByText('Python')).toBeInTheDocument()
+    expect(await within(versionGroup).findByText('v0.0.1-SNAPSHOT')).toBeInTheDocument()
+    expect(within(versionGroup).getByText('v2.3.0')).toBeInTheDocument()
+    expect(screen.getByText('3/3 服务在线')).toBeInTheDocument()
   })
 
   it('navigates from the consultation workspace to the patient directory', async () => {
