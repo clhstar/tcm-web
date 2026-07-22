@@ -59,7 +59,7 @@ jobs:
             -out "$RUNNER_TEMP/tcm-test-signing.pem"
           sudo security add-trusted-cert \
             -d \
-            -r trustAsRoot \
+            -r trustRoot \
             -k /Library/Keychains/System.keychain \
             "$RUNNER_TEMP/tcm-test-signing.pem"
         env:
