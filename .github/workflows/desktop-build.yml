@@ -50,20 +50,6 @@ jobs:
         run: pnpm run ${{ matrix.command }}
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      - name: Publish Windows update
-        if: ${{ startsWith(github.ref, 'refs/tags/v') && matrix.os == 'windows-latest' }}
-        shell: bash
-        run: |
-          if ! gh release view "$GITHUB_REF_NAME"; then
-            gh release create "$GITHUB_REF_NAME" --verify-tag --title "${GITHUB_REF_NAME#v}" --generate-notes
-          fi
-          gh release upload "$GITHUB_REF_NAME" \
-            release/latest.yml \
-            release/*.exe \
-            release/*.blockmap \
-            --clobber
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload workflow artifact
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
@@ -71,3 +57,31 @@ jobs:
           name: tcm-consultation-${{ matrix.artifact }}
           path: ${{ matrix.paths }}
           if-no-files-found: error
+
+  publish:
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download desktop packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: tcm-consultation-*
+          path: release
+          merge-multiple: true
+      - name: Publish desktop update
+        shell: bash
+        run: |
+          if ! gh release view "$GITHUB_REF_NAME"; then
+            gh release create "$GITHUB_REF_NAME" --verify-tag --title "${GITHUB_REF_NAME#v}" --generate-notes
+          fi
+          gh release upload "$GITHUB_REF_NAME" \
+            release/latest*.yml \
+            release/*.exe \
+            release/*.dmg \
+            release/*.zip \
+            release/*.blockmap \
+            --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
