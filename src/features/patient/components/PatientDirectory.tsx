@@ -62,7 +62,6 @@ export function PatientDirectory({
 
       <div className="patient-list-meta">
         <strong>{total} 位患者</strong>
-        <span>点击条目查看完整档案</span>
       </div>
 
       <div className="patient-list">
