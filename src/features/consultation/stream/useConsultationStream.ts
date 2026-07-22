@@ -35,6 +35,7 @@ type SendConsultationMessageInput = {
   patientId?: number
   onConsultationContext?: (context: ConsultationContext) => void
   onSuggestedAction?: () => void
+  onConversationTitle?: (title: string) => void
   onRunSettled?: () => void | Promise<void>
 }
 
@@ -235,6 +236,7 @@ export function useConsultationStream() {
     patientId,
     onConsultationContext,
     onSuggestedAction,
+    onConversationTitle,
     onRunSettled,
   }: SendConsultationMessageInput): Promise<boolean> => {
     if (abortControllerRef.current) return false
@@ -279,6 +281,7 @@ export function useConsultationStream() {
             handleStreamEvent(event, assistantMessage.id, context, dispatch, {
               onConsultationContext,
               onSuggestedAction,
+              onConversationTitle,
               onRunId: (observedRunId) => setRunId(observedRunId),
             })
           }
@@ -358,10 +361,18 @@ function handleStreamEvent(
   assistantMessageId: number,
   context: StreamContext,
   dispatch: Dispatch<ConsultationStreamAction>,
-  callbacks: Pick<SendConsultationMessageInput, 'onConsultationContext' | 'onSuggestedAction'> & {
+  callbacks: Pick<
+    SendConsultationMessageInput,
+    'onConsultationContext' | 'onSuggestedAction' | 'onConversationTitle'
+  > & {
     onRunId?: (runId: string) => void
   },
 ) {
+  if (event.event === 'thread_title') {
+    const title = parseConversationTitle(event.data)
+    if (title) callbacks.onConversationTitle?.(title)
+    return
+  }
   if (event.event === 'consultation_context') {
     const parsed = parseConsultationContext(event.data)
     if (parsed) callbacks.onConsultationContext?.(parsed)
@@ -409,6 +420,12 @@ function handleStreamEvent(
     if (publicResponse.suggestedAction === 'add_consultation_tag') callbacks.onSuggestedAction?.()
   }
   if (event.event === 'error') context.failed = true
+}
+
+export function parseConversationTitle(value: unknown): string | null {
+  if (!isRecord(value) || typeof value.title !== 'string') return null
+  const title = value.title.trim()
+  return title || null
 }
 
 function parseConsultationContext(value: unknown): ConsultationContext | null {

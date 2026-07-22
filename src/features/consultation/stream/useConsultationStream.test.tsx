@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { useConsultationStream } from './useConsultationStream'
+import { parseConversationTitle, useConsultationStream } from './useConsultationStream'
 
 function jsonResponse(body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -70,5 +70,13 @@ describe('useConsultationStream run recovery', () => {
       'http://localhost:4040/api/conversations/101/runs/current',
       expect.objectContaining({ method: 'GET' }),
     )
+  })
+})
+
+describe('conversation title stream events', () => {
+  it('reads a non-empty model title', () => {
+    expect(parseConversationTitle({ title: '  晨起咽痛咨询  ' })).toBe('晨起咽痛咨询')
+    expect(parseConversationTitle({ title: '   ' })).toBeNull()
+    expect(parseConversationTitle({})).toBeNull()
   })
 })

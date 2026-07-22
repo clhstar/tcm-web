@@ -653,6 +653,15 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
           synchronizeConsultationContext(context, messageTag)
         },
         onSuggestedAction: () => setShowTagSuggestion(true),
+        onConversationTitle: (title) => {
+          if (!isContextForActiveConversation(activeConsultationIdRef.current, consultation.id)) return
+          setActiveConsultation((current) => (
+            current?.id === consultation.id
+              ? { ...current, chiefComplaint: title }
+              : current
+          ))
+          void queryClient.invalidateQueries({ queryKey: conversationKeys.all })
+        },
         onRunSettled: () => refreshConversationAfterRun(consultation.id),
       })
     } finally {
