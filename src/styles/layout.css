@@ -106,14 +106,14 @@
 
 .dashboard-brand strong {
   color: var(--app-text);
-  font-size: 18px;
+  font-size: var(--font-size-heading);
   font-weight: 850;
 }
 
 .dashboard-brand span {
   margin-top: 4px;
   color: var(--app-text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-caption);
 }
 
 .dashboard-nav {
@@ -180,14 +180,14 @@
 }
 
 .dashboard-nav-item strong {
-  font-size: 14px;
+  font-size: var(--font-size-body);
   font-weight: 820;
 }
 
 .dashboard-nav-item small {
   margin-top: 3px;
   color: var(--app-text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-caption);
 }
 
 .sidebar-footnote {
@@ -199,7 +199,7 @@
   border-radius: 8px;
   padding: 12px;
   background: var(--app-shell);
-  font-size: 12px;
+  font-size: var(--font-size-caption);
 }
 
 .sidebar-footnote .material-icon {
@@ -238,7 +238,7 @@
   border-radius: 999px;
   color: #ffffff;
   background: #263241;
-  font-size: 13px;
+  font-size: var(--font-size-body);
   font-weight: 850;
 }
 
@@ -260,7 +260,7 @@
 .sidebar-account-button strong,
 .account-menu-profile strong {
   color: var(--app-text);
-  font-size: 14px;
+  font-size: var(--font-size-body);
   font-weight: 820;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -270,7 +270,7 @@
 .sidebar-account-button small,
 .account-menu-profile small {
   color: var(--app-text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-caption);
 }
 
 .sidebar-account-button > .material-icon,
@@ -347,19 +347,19 @@
 
 .account-menu-version-heading > span {
   color: var(--app-text);
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   font-weight: 760;
 }
 
 .account-menu-version-heading small {
   color: var(--app-text-muted);
-  font-size: 10px;
+  font-size: var(--font-size-caption);
 }
 
 .account-menu-version-row {
   min-height: 18px;
   color: #4b5563;
-  font-size: 11px;
+  font-size: var(--font-size-caption);
 }
 
 .account-menu-version-service {
@@ -388,7 +388,7 @@
   min-width: 0;
   color: #344054;
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 10px;
+  font-size: var(--font-size-caption);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -487,7 +487,7 @@
 .dashboard-topbar p {
   margin: 0 0 5px;
   color: var(--app-text-muted);
-  font-size: 13px;
+  font-size: var(--font-size-body);
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -496,7 +496,7 @@
 .dashboard-topbar h1 {
   margin: 0;
   color: var(--app-text);
-  font-size: 30px;
+  font-size: var(--font-size-page-title);
   font-weight: 850;
   line-height: 1.16;
 }
@@ -507,7 +507,7 @@
   align-items: center;
   gap: 0;
   color: #667085;
-  font-size: 14px;
+  font-size: var(--font-size-body);
   font-weight: 700;
   line-height: 1.4;
 }
@@ -621,7 +621,7 @@
 }
 
 .dashboard-brand strong {
-  font-size: 16px;
+  font-size: var(--font-size-lead);
   font-weight: 760;
 }
 
@@ -639,7 +639,7 @@
   color: #344054;
   background: transparent;
   box-shadow: none;
-  font-size: 13px;
+  font-size: var(--font-size-body);
   font-weight: 650;
 }
 
@@ -670,7 +670,7 @@
 }
 
 .dashboard-nav-item strong {
-  font-size: 13px;
+  font-size: var(--font-size-body);
   font-weight: 650;
 }
 
@@ -696,11 +696,11 @@
   gap: 8px;
   padding: 0 9px;
   color: #808790;
-  font-size: 12px;
+  font-size: var(--font-size-caption);
 }
 
 .sidebar-section-label small {
-  font-size: 11px;
+  font-size: var(--font-size-caption);
 }
 
 .sidebar-conversation-list {
@@ -721,7 +721,7 @@
   padding: 0 9px 0 25px;
   color: #343a40;
   text-decoration: none;
-  font-size: 13px;
+  font-size: var(--font-size-body);
 }
 
 .sidebar-conversation-item:hover,
@@ -739,7 +739,7 @@
 .sidebar-conversation-empty {
   padding: 8px 9px 8px 25px;
   color: var(--app-text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   line-height: 1.5;
 }
 
@@ -806,13 +806,13 @@
 }
 
 .desktop-update-copy strong {
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   font-weight: 720;
 }
 
 .desktop-update-copy small {
   color: #69727d;
-  font-size: 10px;
+  font-size: var(--font-size-caption);
 }
 
 .desktop-update-progress {

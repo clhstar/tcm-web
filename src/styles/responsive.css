@@ -46,7 +46,7 @@
     border-radius: 8px;
     color: var(--app-text-muted);
     text-decoration: none;
-    font-size: 12px;
+    font-size: var(--font-size-caption);
     font-weight: 800;
   }
 
@@ -68,11 +68,11 @@
   }
 
   .auth-intro h1 {
-    font-size: 42px;
+    font-size: var(--font-size-display);
   }
 
   .auth-intro p {
-    font-size: 16px;
+    font-size: var(--font-size-lead);
   }
 
   .auth-panel {
@@ -232,7 +232,7 @@
   }
 
   .patient-phone {
-    font-size: 12px;
+    font-size: var(--font-size-caption);
   }
 
   .consultation-inline-error {
@@ -266,7 +266,7 @@
 
   .consultation-starter-welcome h3 {
     margin-bottom: 4px;
-    font-size: 24px;
+    font-size: var(--font-size-title);
   }
 
   .consultation-suggestion-grid {

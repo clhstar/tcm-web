@@ -1,4 +1,13 @@
 :root {
+  /* Shared type scale: keep text hierarchy consistent across every feature. */
+  --font-size-caption: 12px;
+  --font-size-body: 14px;
+  --font-size-lead: 16px;
+  --font-size-heading: 18px;
+  --font-size-title: 24px;
+  --font-size-page-title: 30px;
+  --font-size-display: clamp(42px, 6vw, 72px);
+
   --app-bg: #f6f7f9;
   --app-shell: #ffffff;
   --app-panel: #ffffff;

@@ -21,7 +21,7 @@
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 16px;
   --consultation-reading-width: 760px;
-  --consultation-body-font-size: 14px;
+  --consultation-body-font-size: var(--font-size-body);
   --consultation-body-line-height: 1.65;
 }
 
@@ -103,7 +103,7 @@
 .consultation-starter-welcome h3 {
   margin: 0 0 14px;
   color: #202124;
-  font-size: clamp(25px, 2.3vw, 31px);
+  font-size: var(--font-size-page-title);
   font-weight: 520;
   letter-spacing: -0.035em;
   line-height: 1.25;
@@ -164,21 +164,21 @@
 }
 
 .consultation-suggestion-card strong {
-  font-size: 14px;
+  font-size: var(--font-size-body);
   font-weight: 760;
   line-height: 1.35;
 }
 
 .consultation-suggestion-card small {
   color: var(--app-text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   line-height: 1.4;
 }
 
 .consultation-panel-header h3 {
   margin: 4px 0 0;
   color: var(--app-text);
-  font-size: 18px;
+  font-size: var(--font-size-heading);
   font-weight: 760;
   letter-spacing: -0.01em;
   line-height: 1.35;
@@ -189,7 +189,7 @@
   padding: 6px 10px;
   color: var(--app-accent);
   background: var(--app-accent-soft);
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   font-weight: 850;
 }
 
@@ -233,7 +233,7 @@
 .consultation-inline-error p {
   margin-top: 4px;
   color: var(--app-text-muted);
-  font-size: 13px;
+  font-size: var(--font-size-body);
   line-height: 1.5;
 }
 
@@ -361,7 +361,7 @@
 .assistant-markdown :where(h1, h2, h3, h4) {
   margin: 2px 0 0;
   color: var(--app-text);
-  font-size: 15px;
+  font-size: var(--font-size-body);
   line-height: 1.45;
   font-weight: 700;
 }
@@ -473,7 +473,7 @@
   gap: 6px;
   border: 0;
   background: transparent;
-  font-size: 13px;
+  font-size: var(--font-size-body);
   font-weight: 800;
   line-height: 18px;
 }
@@ -506,7 +506,7 @@
   color: var(--app-text-muted);
   background: transparent;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--font-size-body);
   text-align: left;
   cursor: pointer;
 }
@@ -520,14 +520,14 @@
 
 .thinking-process-trigger strong {
   color: var(--app-text-muted);
-  font-size: 13px;
+  font-size: var(--font-size-body);
   font-weight: 600;
 }
 
 .thinking-process-trigger small,
 .thinking-process-trigger em {
   color: var(--app-text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   font-style: normal;
   white-space: nowrap;
 }
@@ -535,11 +535,11 @@
 .thinking-process-trigger > .material-icon {
   margin-left: auto;
   color: var(--app-text-muted);
-  font-size: 18px;
-.thinking-process-trigger > .material-icon.is-expanded {
-  transform: rotate(90deg);
+  font-size: var(--font-size-heading);
 }
 
+.thinking-process-trigger > .material-icon.is-expanded {
+  transform: rotate(90deg);
 }
 
 .thinking-process-details {
@@ -554,7 +554,7 @@
   color: var(--app-text-muted);
   background: var(--app-shell);
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
-  font-size: 12px;
+  font-size: var(--font-size-caption);
 }
 
 .thinking-process-steps,
@@ -601,12 +601,12 @@
 
 .collaboration-step strong {
   color: var(--app-text);
-  font-size: 12px;
+  font-size: var(--font-size-caption);
 }
 
 .collaboration-step span {
   color: var(--app-text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-caption);
 }
 
 .collaboration-step.running,
@@ -700,7 +700,7 @@
   border-radius: 0;
   padding: 16px 16px 10px;
   resize: none;
-  font-size: 14px;
+  font-size: var(--font-size-body);
   line-height: 1.55;
   color: var(--app-text);
   background: #ffffff;
@@ -745,7 +745,7 @@
 
 .starter-submit-hint {
   color: #8a8f96;
-  font-size: 11px;
+  font-size: var(--font-size-caption);
   white-space: nowrap;
 }
 
@@ -865,7 +865,7 @@
 .history-primary strong {
   display: -webkit-box;
   color: inherit;
-  font-size: 14px;
+  font-size: var(--font-size-body);
   font-weight: 850;
   line-height: 1.35;
   overflow: hidden;
@@ -876,7 +876,7 @@
 .history-primary small,
 .history-meta small {
   color: var(--app-text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-caption);
 }
 
 .history-meta {
@@ -885,7 +885,7 @@
 
 .history-meta em {
   color: var(--app-accent);
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   font-style: normal;
   font-weight: 850;
 }
@@ -919,7 +919,7 @@
 .consultation-records-header h2 {
   margin: 4px 0 8px;
   color: var(--app-text);
-  font-size: 26px;
+  font-size: var(--font-size-title);
   line-height: 1.2;
 }
 
@@ -927,7 +927,7 @@
   max-width: 640px;
   margin: 0;
   color: var(--app-text-muted);
-  font-size: 14px;
+  font-size: var(--font-size-body);
   line-height: 1.65;
 }
 
@@ -937,7 +937,7 @@
   padding: 7px 11px;
   color: #49515a;
   background: #f1f3f5;
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   font-weight: 750;
 }
 
@@ -961,7 +961,7 @@
   padding: 0 16px;
   color: var(--app-text-muted);
   background: #f7f8f9;
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   font-weight: 700;
 }
 
@@ -994,7 +994,7 @@
   border-radius: 9px;
   color: #ffffff;
   background: #202936;
-  font-size: 14px;
+  font-size: var(--font-size-body);
   font-weight: 800;
 }
 
@@ -1012,13 +1012,13 @@
 }
 
 .consultation-record-primary strong {
-  font-size: 14px;
+  font-size: var(--font-size-body);
 }
 
 .consultation-record-primary small,
 .consultation-record-row time {
   color: var(--app-text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-caption);
 }
 
 .consultation-record-status {
@@ -1027,7 +1027,7 @@
   padding: 5px 9px;
   color: #475467;
   background: #eef1f4;
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   font-weight: 750;
 }
 
@@ -1111,14 +1111,14 @@
   border-radius: 0.75rem;
   background: #f5faf7;
   color: #345247;
-  font-size: 0.875rem;
+  font-size: var(--font-size-body);
 }
 
 .consultation-tag-suggestion button,
 .consultation-control-row button { border: 0; border-radius: 0.55rem; padding: 0.45rem 0.7rem; cursor: pointer; }
 .consultation-control-row button {
   font: inherit;
-  font-size: 13px;
+  font-size: var(--font-size-body);
   font-weight: 800;
   line-height: 18px;
 }
@@ -1138,7 +1138,7 @@
   border-radius: 0.75rem;
   background: #f3f7fd;
   color: #294e7a;
-  font-size: 0.875rem;
+  font-size: var(--font-size-body);
 }
 
 .run-governance-status > div,
@@ -1213,7 +1213,7 @@
   color: var(--app-text-soft);
   background: var(--app-shell);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--font-size-body);
   font-weight: 800;
 }
 
@@ -1257,13 +1257,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: var(--font-size-caption);
 }
 
 .consultation-upload-chip small,
 .consultation-message-artifacts small {
   color: var(--app-text-muted);
-  font-size: 11px;
+  font-size: var(--font-size-caption);
 }
 
 .consultation-upload-chip button {
@@ -1271,12 +1271,12 @@
   padding: 2px 4px;
   color: var(--app-text-muted);
   background: transparent;
-  font-size: 18px;
+  font-size: var(--font-size-heading);
   line-height: 1;
 }
 
 .consultation-file-input { display: none; }
-.consultation-files-error { margin: 0; color: #9b342d; font-size: 0.82rem; }
+.consultation-files-error { margin: 0; color: #9b342d; font-size: var(--font-size-caption); }
 
 .consultation-message-artifacts {
   display: grid;
@@ -1309,7 +1309,7 @@
   color: var(--app-accent);
   background: transparent;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   font-weight: 850;
 }
 
@@ -1337,7 +1337,7 @@
   .message-bubble.user { max-width: 88%; }
   .message-bubble.assistant { padding-inline: 0; }
   .message-bubble,
-  .assistant-markdown { font-size: 14px; }
+  .assistant-markdown { font-size: var(--font-size-body); }
 }
 
 .consultation-tag-chip.is-switchable {
@@ -1361,7 +1361,7 @@
   gap: 6px;
   border-radius: 999px;
   padding: 5px 7px;
-  font-size: 13px;
+  font-size: var(--font-size-body);
   font-weight: 800;
 }
 

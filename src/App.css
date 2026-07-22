@@ -68,7 +68,7 @@ button:disabled {
 
 .fatal-error-page strong {
   color: var(--app-text);
-  font-size: 20px;
+  font-size: var(--font-size-heading);
 }
 
 .fatal-error-page p {
@@ -118,7 +118,7 @@ button:disabled {
 .auth-brand {
   gap: 12px;
   color: var(--app-text-muted);
-  font-size: 13px;
+  font-size: var(--font-size-body);
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -144,7 +144,7 @@ button:disabled {
   max-width: 680px;
   margin: 0;
   color: var(--app-text);
-  font-size: clamp(42px, 6vw, 72px);
+  font-size: var(--font-size-display);
   font-weight: 850;
   line-height: 1.02;
 }
@@ -166,7 +166,7 @@ button:disabled {
 .auth-intro p {
   max-width: 680px;
   margin: 22px 0 0;
-  font-size: 19px;
+  font-size: var(--font-size-heading);
 }
 
 .auth-feature-list {
@@ -222,7 +222,7 @@ button:disabled {
 .auth-panel-header h2 {
   margin: 0;
   color: var(--app-text);
-  font-size: 30px;
+  font-size: var(--font-size-page-title);
   font-weight: 850;
 }
 
@@ -276,7 +276,7 @@ button:disabled {
 .consultation-message-form label,
 .patient-search label {
   color: #344054;
-  font-size: 13px;
+  font-size: var(--font-size-body);
   font-weight: 800;
 }
 
@@ -362,14 +362,14 @@ button:disabled {
 
 .app-notification strong {
   color: var(--app-text);
-  font-size: 14px;
+  font-size: var(--font-size-body);
   font-weight: 850;
 }
 
 .app-notification p {
   margin-top: 4px;
   color: var(--app-text-muted);
-  font-size: 13px;
+  font-size: var(--font-size-body);
   line-height: 1.45;
 }
 
@@ -557,7 +557,7 @@ button:disabled {
 .utility-hero h2 {
   margin: 0;
   color: var(--app-text);
-  font-size: 24px;
+  font-size: var(--font-size-title);
   font-weight: 850;
   line-height: 1.2;
 }
@@ -565,7 +565,7 @@ button:disabled {
 .status-label {
   margin: 0 0 5px;
   color: var(--app-indigo);
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   font-weight: 850;
   letter-spacing: 0;
   text-transform: uppercase;
@@ -598,7 +598,7 @@ button:disabled {
 
 .context-profile strong {
   color: var(--app-text);
-  font-size: 18px;
+  font-size: var(--font-size-heading);
   font-weight: 850;
 }
 
@@ -617,7 +617,7 @@ button:disabled {
   border-radius: 8px;
   color: #ffffff;
   background: linear-gradient(180deg, #17202b, #111827);
-  font-size: 22px;
+  font-size: var(--font-size-title);
   font-weight: 850;
 }
 
@@ -643,7 +643,7 @@ button:disabled {
 .patient-details dt,
 .consultation-summary-grid dt {
   color: var(--app-text-muted);
-  font-size: 13px;
+  font-size: var(--font-size-body);
   font-weight: 720;
 }
 
@@ -653,7 +653,7 @@ button:disabled {
   min-width: 0;
   margin: 0;
   color: var(--app-text);
-  font-size: 14px;
+  font-size: var(--font-size-body);
   line-height: 1.55;
   text-align: right;
   overflow-wrap: anywhere;
@@ -689,7 +689,7 @@ button:disabled {
 .utility-hero p {
   margin: 0 0 6px;
   color: var(--app-indigo);
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   font-weight: 850;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -715,7 +715,7 @@ button:disabled {
 
 .utility-grid strong {
   color: var(--app-text);
-  font-size: 17px;
+  font-size: var(--font-size-lead);
 }
 
 .mobile-nav {
