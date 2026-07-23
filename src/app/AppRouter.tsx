@@ -32,7 +32,11 @@ const SettingsPage = lazy(() =>
 )
 
 export function AppRouter() {
-  const { session, authenticate, logout } = useAuth()
+  const { session, isInitializing, authenticate, logout } = useAuth()
+
+  if (isInitializing) {
+    return <div className="route-loading-state" role="status">正在恢复登录状态...</div>
+  }
 
   return (
     <Routes>

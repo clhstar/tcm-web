@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { requestJson } from "../shared/api/httpClient";
+import { readRefreshToken } from "../shared/auth/sessionStorage";
 export { TOKEN_STORAGE_KEY } from "../shared/auth/sessionStorage";
 
 const userProfileSchema = z.object({
@@ -13,6 +14,8 @@ export const authPayloadSchema = z.object({
   token: z.string(),
   tokenType: z.string(),
   expiresIn: z.number(),
+  refreshToken: z.string().optional(),
+  refreshExpiresIn: z.number().optional(),
   user: userProfileSchema,
 });
 
@@ -49,6 +52,23 @@ export async function register(input: RegisterInput): Promise<AuthPayload> {
     username: input.username,
     password: input.password,
   });
+}
+
+export async function refreshSession(): Promise<AuthPayload> {
+  const refreshToken = readRefreshToken();
+  if (!refreshToken) {
+    throw new Error("Refresh token is unavailable");
+  }
+
+  const payload = await requestJson("/api/user/refresh", {
+    method: "POST",
+    body: JSON.stringify({ refreshToken }),
+  }, {
+    authenticated: false,
+    fallbackMessage: "Session refresh failed",
+  });
+
+  return authResponseSchema.parse(payload).data;
 }
 
 async function requestAuth(

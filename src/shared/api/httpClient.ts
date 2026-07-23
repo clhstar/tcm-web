@@ -3,6 +3,8 @@ import { readAccessToken } from '../auth/sessionStorage'
 
 export const AUTH_EXPIRED_EVENT = 'tcm:auth-expired'
 
+type AuthRefreshHandler = () => Promise<boolean>
+
 type ApiRequestOptions = {
   authenticated?: boolean
   baseUrl?: string
@@ -11,6 +13,12 @@ type ApiRequestOptions = {
 }
 
 const DEFAULT_ERROR_MESSAGE = 'Request failed, please try again later.'
+let authRefreshHandler: AuthRefreshHandler | null = null
+let authRefreshPromise: Promise<boolean> | null = null
+
+export function setAuthRefreshHandler(handler: AuthRefreshHandler | null) {
+  authRefreshHandler = handler
+}
 
 export async function requestJson(
   path: string,
@@ -39,18 +47,16 @@ export async function fetchApiResponse(
   options: ApiRequestOptions = {},
 ) {
   const authenticated = options.authenticated ?? true
-  const headers = createJsonHeaders(init.headers, authenticated)
-  if (typeof FormData !== 'undefined' && init.body instanceof FormData) {
-    delete headers['Content-Type']
-  }
-  const response = await fetch(`${options.baseUrl ?? API_BASE_URL}${path}`, {
-    ...init,
-    method: init.method ?? 'GET',
-    headers,
-  })
+  let response = await performFetch(path, init, options, authenticated)
 
   if (authenticated && response.status === 401 && typeof window !== 'undefined') {
-    window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT))
+    const refreshed = await refreshAuthentication()
+    if (refreshed) {
+      response = await performFetch(path, init, options, authenticated)
+    }
+    if (response.status === 401) {
+      window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT))
+    }
   }
 
   return response
@@ -60,17 +66,44 @@ export function createJsonHeaders(extraHeaders?: HeadersInit, authenticated = tr
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   }
-  const token = authenticated ? readAccessToken() : null
-  if (token) {
-    headers.Authorization = `Bearer ${token}`
-  }
   if (extraHeaders) {
     new Headers(extraHeaders).forEach((value, key) => {
       headers[key] = value
     })
   }
+  const token = authenticated ? readAccessToken() : null
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
 
   return headers
+}
+
+async function performFetch(
+  path: string,
+  init: RequestInit,
+  options: ApiRequestOptions,
+  authenticated: boolean,
+) {
+  const headers = createJsonHeaders(init.headers, authenticated)
+  if (typeof FormData !== 'undefined' && init.body instanceof FormData) {
+    delete headers['Content-Type']
+  }
+  return fetch(`${options.baseUrl ?? API_BASE_URL}${path}`, {
+    ...init,
+    method: init.method ?? 'GET',
+    headers,
+  })
+}
+
+async function refreshAuthentication() {
+  if (!authRefreshHandler) return false
+  if (!authRefreshPromise) {
+    authRefreshPromise = authRefreshHandler().finally(() => {
+      authRefreshPromise = null
+    })
+  }
+  return authRefreshPromise
 }
 
 export async function readJsonResponse(response: Response): Promise<unknown> {

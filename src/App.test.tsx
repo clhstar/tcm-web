@@ -10,6 +10,8 @@ const authResponse = {
     token: 'token-123',
     tokenType: 'Bearer',
     expiresIn: 7200,
+    refreshToken: 'refresh-token-123',
+    refreshExpiresIn: 2592000,
     user: {
       id: 1,
       username: 'doctor_demo',
@@ -138,6 +140,9 @@ function installFetchRouter(options: FetchRouterOptions = {}) {
 
     if (method === 'POST' && url.pathname === '/api/user/register') {
       return jsonResponse(userResponse)
+    }
+    if (method === 'POST' && url.pathname === '/api/user/refresh') {
+      return jsonResponse(authResponse)
     }
     if (method === 'POST' && url.pathname === '/api/user/login') {
       return jsonResponse(authResponse)
@@ -292,6 +297,14 @@ function findRequest(
   })
 }
 
+function jwtWithExpiration(exp: number) {
+  const encode = (value: object) => btoa(JSON.stringify(value))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '')
+  return `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode({ exp })}.signature`
+}
+
 describe('App routes and consultation entry', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -390,6 +403,27 @@ describe('App routes and consultation entry', () => {
     expect(within(savedRecords).getByText('张三 · 记录 #901')).toBeInTheDocument()
     expect(within(savedRecords).queryByText('未绑定患者')).not.toBeInTheDocument()
     expect(window.location.pathname).toBe('/consultation-records')
+  })
+
+  it('refreshes an expired access token on startup and restores the saved login', async () => {
+    const fetchMock = installFetchRouter()
+    const expiredSession = {
+      ...authResponse.data,
+      token: jwtWithExpiration(Math.floor(Date.now() / 1000) - 60),
+    }
+    localStorage.setItem('tcm_access_token', expiredSession.token)
+    localStorage.setItem('tcm_refresh_token', expiredSession.refreshToken)
+    localStorage.setItem('tcm_auth_session', JSON.stringify(expiredSession))
+    window.history.replaceState({}, '', '/consultation')
+
+    render(<App />)
+
+    expect(screen.getByRole('status')).toHaveTextContent('正在恢复登录状态')
+    expect(await screen.findByRole('heading', { name: '新建对话' })).toBeInTheDocument()
+    expect(findRequest(fetchMock, 'POST', '/api/user/refresh')).toBeDefined()
+    expect(localStorage.getItem('tcm_access_token')).toBe('token-123')
+    expect(localStorage.getItem('tcm_refresh_token')).toBe('refresh-token-123')
+    expect(window.location.pathname).toBe('/consultation')
   })
 
   it('shows live frontend, Java, and Python versions in the account menu', async () => {

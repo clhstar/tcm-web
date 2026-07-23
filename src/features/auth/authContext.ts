@@ -3,6 +3,7 @@ import type { AuthPayload } from '../../api/auth'
 
 export type AuthContextValue = {
   session: AuthPayload | null
+  isInitializing: boolean
   authenticate: (session: AuthPayload) => void
   logout: () => void
 }
