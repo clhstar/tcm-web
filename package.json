@@ -1,7 +1,7 @@
 {
   "name": "tcm-web",
   "private": true,
-  "version": "0.1.15",
+  "version": "0.1.16",
   "description": "TCM consultation web and desktop client",
   "author": "TCM Consultation Team",
   "type": "module",
@@ -16,7 +16,7 @@
     "build": "tsc -b && vite build",
     "build:desktop": "pnpm build && electron-builder --publish never",
     "build:desktop:win": "pnpm build && electron-builder --win nsis --x64 --publish never",
-    "build:desktop:mac": "pnpm build && electron-builder --mac dmg zip --x64 --arm64 --publish never",
+    "build:desktop:mac": "pnpm build && electron-builder --mac dmg zip --arm64 --publish never",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -82,14 +82,12 @@
         {
           "target": "dmg",
           "arch": [
-            "x64",
             "arm64"
           ]
         },
         {
           "target": "zip",
           "arch": [
-            "x64",
             "arm64"
           ]
         }
