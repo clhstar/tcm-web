@@ -46,6 +46,10 @@ type RecoverConsultationRunInput = {
 
 type RunRecoveryCallbacks = Pick<SendConsultationMessageInput, 'onRunSettled'>
 
+type MonitorRunOptions = {
+  keepUiSettled?: boolean
+}
+
 type StreamContext = {
   assistantId: string | null
   failed: boolean
@@ -113,12 +117,14 @@ export function useConsultationStream() {
     observedRunId: string,
     callbacks: RunRecoveryCallbacks,
     initialStatus?: ConsultationRunStatus,
+    options: MonitorRunOptions = {},
   ) => {
     stopRunMonitor()
     const monitorSequence = monitorSequenceRef.current
     const controller = new AbortController()
     monitorAbortControllerRef.current = controller
     let status = initialStatus
+    const keepUiSettled = options.keepUiSettled === true
 
     try {
       while (!controller.signal.aborted && monitorSequence === monitorSequenceRef.current) {
@@ -133,16 +139,20 @@ export function useConsultationStream() {
         setRunStatus(status)
 
         if (isRunInProgress(status.status)) {
-          dispatch({
-            type: 'lifecycle',
-            lifecycle: status.status === 'cancelling' ? 'cancelling' : 'recovering',
-          })
+          if (!keepUiSettled) {
+            dispatch({
+              type: 'lifecycle',
+              lifecycle: status.status === 'cancelling' ? 'cancelling' : 'recovering',
+            })
+          }
           status = undefined
           await waitForRunPoll(controller.signal)
           continue
         }
 
-        dispatch({ type: 'lifecycle', lifecycle: 'reconciling' })
+        if (!keepUiSettled) {
+          dispatch({ type: 'lifecycle', lifecycle: 'reconciling' })
+        }
         try {
           const historyMessages = await listConsultationMessages(consultationId)
           if (controller.signal.aborted || monitorSequence !== monitorSequenceRef.current) return
@@ -293,11 +303,16 @@ export function useConsultationStream() {
       setRunId(result.runId)
       setRunStatus(result.runStatus)
       if (result.runStatus) {
+        const keepUiSettled = context.hasPublicResponse
+        if (keepUiSettled) {
+          settleVisibleResponse(context, assistantMessage.id, dispatch)
+        }
         void monitorRun(
           consultation.id,
           result.runId,
           { onRunSettled },
           result.runStatus,
+          { keepUiSettled },
         )
         return true
       }
@@ -314,14 +329,7 @@ export function useConsultationStream() {
         dispatch({ type: 'restore', ...restored })
       }
 
-      if (!context.historyReconciled && context.assistantId === 'workflow_agent') {
-        dispatch({
-          type: 'settle-collaboration',
-          messageId: assistantMessage.id,
-          outcome: context.failed ? 'failed' : 'completed',
-        })
-      }
-      dispatch({ type: 'lifecycle', lifecycle: 'completed' })
+      settleVisibleResponse(context, assistantMessage.id, dispatch)
       return true
     } catch (error) {
       if (!isCurrent() || isAbortError(error)) return false
@@ -420,6 +428,21 @@ function handleStreamEvent(
     if (publicResponse.suggestedAction === 'add_consultation_tag') callbacks.onSuggestedAction?.()
   }
   if (event.event === 'error') context.failed = true
+}
+
+function settleVisibleResponse(
+  context: StreamContext,
+  assistantMessageId: number,
+  dispatch: Dispatch<ConsultationStreamAction>,
+) {
+  if (!context.historyReconciled && context.assistantId === 'workflow_agent') {
+    dispatch({
+      type: 'settle-collaboration',
+      messageId: assistantMessageId,
+      outcome: context.failed ? 'failed' : 'completed',
+    })
+  }
+  dispatch({ type: 'lifecycle', lifecycle: 'completed' })
 }
 
 export function parseConversationTitle(value: unknown): string | null {
