@@ -11,7 +11,7 @@ const { autoUpdater } = electronUpdater
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url))
 const rendererDirectory = path.resolve(currentDirectory, '..', 'dist')
 const developmentUrl = process.env.TCM_WEB_DEV_SERVER_URL ?? 'http://127.0.0.1:5173'
-const updateCheckInterval = 4 * 60 * 60 * 1000
+const updateCheckInterval = 5 * 60 * 1000
 const authSessionFileName = 'auth-session.json'
 const maxAuthSessionBytes = 128 * 1024
 
