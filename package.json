@@ -21,7 +21,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "format": "biome format --write .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "release": "node scripts/release-version.mjs"
   },
   "dependencies": {
     "@material-design-icons/svg": "^0.14.15",
