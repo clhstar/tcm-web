@@ -128,8 +128,12 @@ export function ConsultationChatPanel({
   return (
     <section className="consultation-card consultation-chat-panel" aria-label="当前问诊">
       <div className="consultation-panel-header">
-        <div>
+        <div className="consultation-title-cluster">
+          <MaterialIcon name="chat" />
           <h3>{consultation?.chiefComplaint || '尚未开始问诊'}</h3>
+          <span className="consultation-title-more" aria-hidden="true">
+            <MaterialIcon name="moreHoriz" />
+          </span>
         </div>
         <strong>{consultationContext ? statusLabel(consultationContext.status) : consultation?.statusName || '待创建'}</strong>
       </div>
@@ -227,7 +231,7 @@ export function ConsultationChatPanel({
                 value={draft}
                 onChange={(event) => onDraftChange(event.target.value)}
                 onKeyDown={(event) => {
-                  if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !isLoading && !isRunBlocking) {
+                  if (event.key === 'Enter' && !event.shiftKey && !isLoading && !isRunBlocking) {
                     event.preventDefault()
                     void onSend()
                   }
@@ -281,7 +285,6 @@ export function ConsultationChatPanel({
                     </div>
                   ) : null}
                 </div>
-                <span className="starter-submit-hint">Ctrl / ⌘ + Enter</span>
                 <button
                   type={isSending && canControlRun ? 'button' : 'submit'}
                   className={`message-send-button consultation-composer-submit${isSending && canControlRun ? ' is-stop' : ''}`}

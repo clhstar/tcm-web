@@ -220,7 +220,7 @@ describe('ConsultationChatPanel run governance', () => {
     await waitFor(() => expect(consultationApi.listFiles).toHaveBeenCalledTimes(2))
   })
 
-  it('reuses the new conversation composer and supports the send shortcut', async () => {
+  it('reuses the new conversation composer and sends with Enter', async () => {
     const onSend = vi.fn().mockResolvedValue(undefined)
     render(<ConsultationChatPanel {...props({ onSend })} />)
 
@@ -230,7 +230,10 @@ describe('ConsultationChatPanel run governance', () => {
     expect(screen.queryByLabelText('当前对话模式')).not.toBeInTheDocument()
     expect(await screen.findByRole('button', { name: '上传文件' })).toBeInTheDocument()
 
-    fireEvent.keyDown(textbox, { key: 'Enter', ctrlKey: true })
+    fireEvent.keyDown(textbox, { key: 'Enter' })
+    expect(onSend).toHaveBeenCalledTimes(1)
+
+    fireEvent.keyDown(textbox, { key: 'Enter', shiftKey: true })
     expect(onSend).toHaveBeenCalledTimes(1)
   })
 

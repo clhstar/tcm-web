@@ -859,7 +859,7 @@ function ConsultationStarter({
           value={chiefComplaint}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={(event) => {
-            if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+            if (event.key === 'Enter' && !event.shiftKey) {
               event.preventDefault()
               onSubmit()
             }
@@ -890,7 +890,6 @@ function ConsultationStarter({
               </button>
             )}
           </div>
-          <span className="starter-submit-hint">Ctrl / ⌘ + Enter</span>
           <button
             type="submit"
             className="starter-submit-button consultation-composer-submit"

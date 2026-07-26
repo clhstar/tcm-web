@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -566,8 +566,9 @@ describe('App routes and consultation entry', () => {
     render(<App />)
 
     await loginThroughUi(user)
-    await user.type(await screen.findByRole('textbox', { name: '消息' }), '最近饭后胃胀')
-    await user.click(screen.getByRole('button', { name: '发送消息' }))
+    const messageInput = await screen.findByRole('textbox', { name: '消息' })
+    await user.type(messageInput, '最近饭后胃胀')
+    fireEvent.keyDown(messageInput, { key: 'Enter' })
 
     expect(await screen.findByText('已收到，我会先按普通对话回答。')).toBeInTheDocument()
     const createRequest = findRequest(fetchMock, 'POST', '/api/conversations')

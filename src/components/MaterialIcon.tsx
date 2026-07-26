@@ -21,6 +21,7 @@ import libraryBooksIcon from '@material-design-icons/svg/outlined/library_books.
 import logoutIcon from '@material-design-icons/svg/outlined/logout.svg?raw'
 import manageSearchIcon from '@material-design-icons/svg/outlined/manage_search.svg?raw'
 import medicalServicesIcon from '@material-design-icons/svg/outlined/medical_services.svg?raw'
+import moreHorizIcon from '@material-design-icons/svg/outlined/more_horiz.svg?raw'
 import personIcon from '@material-design-icons/svg/outlined/person.svg?raw'
 import personAddIcon from '@material-design-icons/svg/outlined/person_add.svg?raw'
 import saveIcon from '@material-design-icons/svg/outlined/save.svg?raw'
@@ -57,6 +58,7 @@ const iconSources = {
   logout: logoutIcon,
   manageSearch: manageSearchIcon,
   medicalServices: medicalServicesIcon,
+  moreHoriz: moreHorizIcon,
   person: personIcon,
   personAdd: personAddIcon,
   save: saveIcon,

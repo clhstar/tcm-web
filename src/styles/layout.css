@@ -4,7 +4,7 @@
   position: relative;
   display: grid;
   grid-template-columns: var(--app-sidebar-width) minmax(0, 1fr);
-  background: var(--app-bg);
+  background: #ffffff;
   overflow: hidden;
 }
 
@@ -21,7 +21,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  border-right: 1px solid var(--app-border);
+  border-right: 0;
   padding: 16px;
   background: rgba(250, 251, 252, 0.94);
   overflow: hidden;
@@ -78,17 +78,17 @@
   bottom: 0;
   left: 50%;
   width: 1px;
-  background: #d8dee6;
-  opacity: 0.72;
+  background: transparent;
+  opacity: 0;
   transform: translateX(-50%);
 }
 
 .sidebar-resize-handle:hover::before,
 .sidebar-resize-handle:focus-visible::before,
 .sidebar-resizing .sidebar-resize-handle::before {
-  width: 2px;
-  background: #c8d0da;
-  opacity: 0.9;
+  width: 1px;
+  background: transparent;
+  opacity: 0;
 }
 
 .dashboard-brand {
@@ -463,13 +463,14 @@
   min-height: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  padding: 0 16px;
+  background: #ffffff;
+  padding: 0 20px;
   overflow: hidden;
 }
 
 .dashboard-main.without-breadcrumb {
   grid-template-rows: minmax(0, 1fr);
-  padding-top: 16px;
+  padding-top: 0;
 }
 
 .dashboard-topbar {
@@ -482,7 +483,7 @@
   gap: 16px;
   margin-bottom: 0;
   padding: 16px 0;
-  background: linear-gradient(180deg, rgba(246, 247, 249, 0.98) 0%, rgba(246, 247, 249, 0.92) 76%, rgba(246, 247, 249, 0) 100%);
+  background: #ffffff;
   backdrop-filter: blur(14px);
 }
 
@@ -598,7 +599,8 @@
   min-height: 0;
   overflow: auto;
   overflow-x: hidden;
-  padding: 0 0 16px;
+  background: #ffffff;
+  padding: 0 0 20px;
   scrollbar-gutter: stable;
 }
 

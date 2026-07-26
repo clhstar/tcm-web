@@ -280,8 +280,7 @@
     padding: 12px;
   }
 
-  .consultation-suggestion-card small,
-  .starter-submit-hint {
+  .consultation-suggestion-card small {
     display: none;
   }
 
