@@ -6,8 +6,8 @@ import { useNotification } from "../../components/notificationContext";
 type AuthMode = "login" | "register";
 
 type AuthScreenProps = {
-  onAuthenticated: (session: AuthPayload) => void;
-};
+  onAuthenticated: (session: AuthPayload) => Promise<void>
+}
 
 export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
   const notify = useNotification();
@@ -54,8 +54,8 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
                 username: form.username,
                 nickname: form.nickname,
                 password: form.password,
-              });
-        onAuthenticated(auth);
+              })
+        await onAuthenticated(auth)
       } catch (submitError) {
         setError(
           submitError instanceof Error

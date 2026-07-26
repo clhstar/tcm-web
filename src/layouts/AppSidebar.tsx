@@ -14,7 +14,7 @@ const sidebarNavigationItems = navigationItems.filter(
 type AppSidebarProps = {
   isCollapsed: boolean
   userName: string
-  onLogout: () => void
+  onLogout: () => Promise<void>
   onToggle: () => void
 }
 
@@ -59,9 +59,9 @@ export function AppSidebar({ isCollapsed, userName, onLogout, onToggle }: AppSid
     navigate(path)
   }
 
-  function logout() {
+  async function logout() {
     setIsAccountMenuOpen(false)
-    onLogout()
+    await onLogout()
     navigate('/login', { replace: true })
   }
 

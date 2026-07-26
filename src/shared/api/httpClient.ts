@@ -3,7 +3,8 @@ import { readAccessToken } from '../auth/sessionStorage'
 
 export const AUTH_EXPIRED_EVENT = 'tcm:auth-expired'
 
-type AuthRefreshHandler = () => Promise<boolean>
+export type AuthRefreshResult = 'refreshed' | 'expired' | 'unavailable'
+type AuthRefreshHandler = () => Promise<AuthRefreshResult>
 
 type ApiRequestOptions = {
   authenticated?: boolean
@@ -14,7 +15,17 @@ type ApiRequestOptions = {
 
 const DEFAULT_ERROR_MESSAGE = 'Request failed, please try again later.'
 let authRefreshHandler: AuthRefreshHandler | null = null
-let authRefreshPromise: Promise<boolean> | null = null
+let authRefreshPromise: Promise<AuthRefreshResult> | null = null
+
+export class ApiRequestError extends Error {
+  readonly status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'ApiRequestError'
+    this.status = status
+  }
+}
 
 export function setAuthRefreshHandler(handler: AuthRefreshHandler | null) {
   authRefreshHandler = handler
@@ -29,12 +40,13 @@ export async function requestJson(
   const payload = await readJsonResponse(response)
 
   if (!response.ok) {
-    throw new Error(
+    throw new ApiRequestError(
       readApiErrorMessage(
         payload,
         options.fallbackMessage ?? DEFAULT_ERROR_MESSAGE,
         options.errorKeys,
       ),
+      response.status,
     )
   }
 
@@ -50,11 +62,11 @@ export async function fetchApiResponse(
   let response = await performFetch(path, init, options, authenticated)
 
   if (authenticated && response.status === 401 && typeof window !== 'undefined') {
-    const refreshed = await refreshAuthentication()
-    if (refreshed) {
+    const refreshResult = await refreshAuthentication()
+    if (refreshResult === 'refreshed') {
       response = await performFetch(path, init, options, authenticated)
     }
-    if (response.status === 401) {
+    if (refreshResult === 'expired' || (refreshResult === 'refreshed' && response.status === 401)) {
       window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT))
     }
   }
@@ -97,7 +109,7 @@ async function performFetch(
 }
 
 async function refreshAuthentication() {
-  if (!authRefreshHandler) return false
+  if (!authRefreshHandler) return 'unavailable' as const
   if (!authRefreshPromise) {
     authRefreshPromise = authRefreshHandler().finally(() => {
       authRefreshPromise = null

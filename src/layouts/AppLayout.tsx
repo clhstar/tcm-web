@@ -8,7 +8,7 @@ import { MobileNav } from './MobileNav'
 type AppLayoutProps = {
   children: ReactNode
   userName: string
-  onLogout: () => void
+  onLogout: () => Promise<void>
 }
 
 const SIDEBAR_DEFAULT_WIDTH = 260

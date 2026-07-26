@@ -15,6 +15,11 @@ declare global {
     tcmDesktop?: Readonly<{
       isDesktop: true
       platform: 'darwin' | 'linux' | 'win32'
+      auth: Readonly<{
+        readSession: () => Promise<string | null>
+        writeSession: (serializedSession: string) => Promise<void>
+        clearSession: () => Promise<void>
+      }>
       updater: Readonly<{
         getState: () => Promise<DesktopUpdaterState>
         check: () => Promise<DesktopUpdaterState>

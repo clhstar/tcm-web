@@ -1,43 +1,55 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { authPayloadSchema, refreshSession, type AuthPayload } from '../../api/auth'
-import { AUTH_EXPIRED_EVENT, setAuthRefreshHandler } from '../../shared/api/httpClient'
+import {
+  ApiRequestError,
+  AUTH_EXPIRED_EVENT,
+  setAuthRefreshHandler,
+  type AuthRefreshResult,
+} from '../../shared/api/httpClient'
 import {
   clearStoredSession,
   isJwtExpired,
   readAccessToken,
+  readPersistedSession,
   readRefreshToken,
-  readStoredSession,
   storeSession,
 } from '../../shared/auth/sessionStorage'
 import { AuthContext } from './authContext'
 
+type InitialAuth = {
+  session: AuthPayload | null
+  shouldRefresh: boolean
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
-  const [initialAuth] = useState(readInitialAuth)
-  const [session, setSession] = useState<AuthPayload | null>(initialAuth.session)
-  const [isInitializing, setIsInitializing] = useState(initialAuth.shouldRefresh)
+  const [session, setSession] = useState<AuthPayload | null>(null)
+  const [isInitializing, setIsInitializing] = useState(true)
 
-  const authenticate = useCallback((nextSession: AuthPayload) => {
-    storeSession(nextSession.token, nextSession)
+  const authenticate = useCallback(async (nextSession: AuthPayload) => {
+    await storeSession(nextSession.token, nextSession)
     setSession(nextSession)
     setIsInitializing(false)
   }, [])
 
-  const logout = useCallback(() => {
-    clearStoredSession()
+  const logout = useCallback(async () => {
+    await clearStoredSession()
     queryClient.clear()
     setSession(null)
     setIsInitializing(false)
   }, [queryClient])
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (): Promise<AuthRefreshResult> => {
     try {
-      authenticate(await refreshSession())
-      return true
-    } catch {
-      logout()
-      return false
+      await authenticate(await refreshSession())
+      return 'refreshed'
+    } catch (error) {
+      if (isRefreshRejected(error)) {
+        await logout()
+        return 'expired'
+      }
+      return 'unavailable'
     }
   }, [authenticate, logout])
 
@@ -47,24 +59,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh])
 
   useEffect(() => {
-    if (!initialAuth.shouldRefresh) return
-
     let cancelled = false
-    void refreshSession()
-      .then((nextSession) => {
-        if (!cancelled) authenticate(nextSession)
-      })
-      .catch(() => {
-        if (!cancelled) logout()
-      })
+
+    async function restoreAuthentication() {
+      try {
+        const initialAuth = await readInitialAuth()
+        if (cancelled) return
+
+        if (!initialAuth.shouldRefresh) {
+          setSession(initialAuth.session)
+          setIsInitializing(false)
+          return
+        }
+
+        try {
+          const nextSession = await refreshSession()
+          await storeSession(nextSession.token, nextSession)
+          if (!cancelled) {
+            setSession(nextSession)
+            setIsInitializing(false)
+          }
+        } catch (error) {
+          if (isRefreshRejected(error)) {
+            await clearStoredSession()
+            if (!cancelled) {
+              queryClient.clear()
+              setSession(null)
+              setIsInitializing(false)
+            }
+            return
+          }
+
+          // A temporary network/server failure must not turn into an apparent logout.
+          if (!cancelled) {
+            setSession(initialAuth.session)
+            setIsInitializing(false)
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setSession(null)
+          setIsInitializing(false)
+        }
+      }
+    }
+
+    void restoreAuthentication()
     return () => {
       cancelled = true
     }
-  }, [authenticate, initialAuth.shouldRefresh, logout])
+  }, [queryClient])
 
   useEffect(() => {
-    window.addEventListener(AUTH_EXPIRED_EVENT, logout)
-    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, logout)
+    const handleExpiredAuthentication = () => {
+      void logout()
+    }
+    window.addEventListener(AUTH_EXPIRED_EVENT, handleExpiredAuthentication)
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, handleExpiredAuthentication)
   }, [logout])
 
   const value = useMemo(
@@ -74,37 +125,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-function readInitialAuth(): { session: AuthPayload | null; shouldRefresh: boolean } {
-  const restored = authPayloadSchema.safeParse(readStoredSession())
-  if (restored.success) {
-    if (!isJwtExpired(restored.data.token)) {
-      return { session: restored.data, shouldRefresh: false }
-    }
-    const refreshToken = restored.data.refreshToken ?? readRefreshToken()
-    if (refreshToken && !isJwtExpired(refreshToken, 0)) {
-      return { session: null, shouldRefresh: true }
-    }
-    clearStoredSession()
-    return { session: null, shouldRefresh: false }
+async function readInitialAuth(): Promise<InitialAuth> {
+  const restored = authPayloadSchema.safeParse(await readPersistedSession())
+  const accessToken = restored.success ? restored.data.token : readAccessToken()
+  const refreshToken = restored.success
+    ? restored.data.refreshToken ?? readRefreshToken()
+    : readRefreshToken()
+  const fallbackSession = restored.success
+    ? restored.data
+    : accessToken || refreshToken
+      ? createFallbackSession(accessToken ?? '')
+      : null
+
+  if (accessToken && !isJwtExpired(accessToken)) {
+    return { session: fallbackSession, shouldRefresh: false }
+  }
+  if (refreshToken && !isJwtExpired(refreshToken, 0)) {
+    return { session: fallbackSession, shouldRefresh: true }
   }
 
-  const token = readAccessToken()
-  if (!token || isJwtExpired(token)) {
-    clearStoredSession()
-    return { session: null, shouldRefresh: false }
-  }
+  await clearStoredSession()
+  return { session: null, shouldRefresh: false }
+}
+
+function createFallbackSession(token: string): AuthPayload {
   return {
-    session: {
-      token,
-      tokenType: 'Bearer',
-      expiresIn: 0,
-      user: {
-        id: 0,
-        username: 'doctor',
-        nickname: '值班医师',
-        role: 'USER',
-      },
+    token,
+    tokenType: 'Bearer',
+    expiresIn: 0,
+    user: {
+      id: 0,
+      username: 'doctor',
+      nickname: '值班医师',
+      role: 'USER',
     },
-    shouldRefresh: false,
   }
+}
+
+function isRefreshRejected(error: unknown) {
+  return error instanceof ApiRequestError && [400, 401, 403].includes(error.status)
 }
