@@ -43,6 +43,7 @@ type ConsultationChatPanelProps = {
   collaborationByMessageId: Record<number, CollaborationStep[]>
   taggedPatient: Patient | null
   consultationContext: ConsultationContext | null
+  fileRefreshKey?: number
   showTagSuggestion: boolean
   isControllingConsultation: boolean
   onDraftChange: (value: string) => void
@@ -74,6 +75,7 @@ export function ConsultationChatPanel({
   collaborationByMessageId,
   taggedPatient,
   consultationContext,
+  fileRefreshKey = 0,
   showTagSuggestion,
   isControllingConsultation,
   onDraftChange,
@@ -95,7 +97,7 @@ export function ConsultationChatPanel({
   const latestAssistantMessageId = [...messages].reverse().find((message) => message.role === 'ASSISTANT')?.id
   const fileWorkspace = useConsultationFiles(
     consultation?.id ?? null,
-    consultation ? `${consultation.id}:${isSending ? 'running' : 'idle'}` : 'no-consultation',
+    consultation ? `${consultation.id}:${fileRefreshKey}` : 'no-consultation',
   )
   const uploadedFiles = fileWorkspace.files.filter((file) => file.kind === 'upload')
   const messageArtifacts = groupArtifactsByAssistantMessage(fileWorkspace.files, messages)

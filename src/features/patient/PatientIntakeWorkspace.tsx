@@ -73,6 +73,7 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
   const [isMessageLoading, setIsMessageLoading] = useState(false)
   const [isCreatingConsultation, setIsCreatingConsultation] = useState(false)
   const [isCompleting, setIsCompleting] = useState(false)
+  const [fileRefreshKey, setFileRefreshKey] = useState(0)
   const {
     messages,
     eventsByMessageId: tcmFlowEventsByMessageId,
@@ -685,6 +686,7 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
     setActiveConsultation(refreshed)
     void queryClient.invalidateQueries({ queryKey: conversationKeys.all })
     applyWorkspaceState(restoreConversationState(refreshed, patient))
+    setFileRefreshKey((current) => current + 1)
   }
 
 
@@ -736,6 +738,7 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
                   collaborationByMessageId={collaborationByMessageId}
                   taggedPatient={taggedPatient}
                   consultationContext={consultationContext}
+                  fileRefreshKey={fileRefreshKey}
                   showTagSuggestion={showTagSuggestion}
                   isControllingConsultation={isControllingConsultation}
                   onDraftChange={setMessageDraft}

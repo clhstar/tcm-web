@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Consultation, ConsultationRunStatus } from '../../api/consultation'
@@ -90,6 +90,7 @@ function props(overrides: Record<string, unknown> = {}) {
 
 describe('ConsultationChatPanel run governance', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     consultationApi.listFiles.mockResolvedValue([])
   })
 
@@ -204,6 +205,19 @@ describe('ConsultationChatPanel run governance', () => {
     expect(screen.queryByText('check_file.manifest.json')).not.toBeInTheDocument()
     expect(screen.queryByText('temp_extract.md')).not.toBeInTheDocument()
     expect(screen.queryByText('temp_extract.manifest.json')).not.toBeInTheDocument()
+  })
+
+  it('refreshes files from the explicit refresh key instead of the sending state', async () => {
+    const { rerender } = render(<ConsultationChatPanel {...props({ fileRefreshKey: 0 })} />)
+
+    await waitFor(() => expect(consultationApi.listFiles).toHaveBeenCalledTimes(1))
+
+    rerender(<ConsultationChatPanel {...props({ fileRefreshKey: 0, isSending: true })} />)
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+    expect(consultationApi.listFiles).toHaveBeenCalledTimes(1)
+
+    rerender(<ConsultationChatPanel {...props({ fileRefreshKey: 1 })} />)
+    await waitFor(() => expect(consultationApi.listFiles).toHaveBeenCalledTimes(2))
   })
 
   it('reuses the new conversation composer and supports the send shortcut', async () => {
