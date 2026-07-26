@@ -212,7 +212,7 @@
 }
 
 .consultation-title-more {
-  width: 28px;
+  width: 30px;
   height: 28px;
   flex: 0 0 auto;
   display: grid;
@@ -220,18 +220,13 @@
   border: 0;
   border-radius: 8px;
   padding: 0;
-  color: var(--app-text-muted);
+  color: #a9b1a9;
   background: transparent;
 }
 
 .consultation-title-more:hover {
-  color: var(--app-text);
-  background: #f2f4f7;
-}
-
-.consultation-title-more .material-icon {
-  width: 18px;
-  height: 18px;
+  color: #667066;
+  background: transparent;
 }
 
 .consultation-panel-header strong {

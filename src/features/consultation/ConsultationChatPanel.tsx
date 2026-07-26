@@ -144,7 +144,7 @@ export function ConsultationChatPanel({
             />
           ) : (
             <span className="consultation-title-more" aria-hidden="true">
-              <MaterialIcon name="moreHoriz" />
+              <span className="conversation-more-dots" aria-hidden="true">...</span>
             </span>
           )}
         </div>
@@ -349,7 +349,7 @@ function ConversationTitleActions({
           title="对话菜单"
           onClick={openFromButton}
         >
-          <MaterialIcon name="moreHoriz" />
+          <span className="conversation-more-dots" aria-hidden="true">...</span>
         </button>
       )}
     </ConversationActions>

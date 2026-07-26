@@ -237,7 +237,7 @@ function SidebarConversationItem({
             title="对话菜单"
             onClick={openFromButton}
           >
-            <MaterialIcon name="moreHoriz" />
+            <span className="conversation-more-dots" aria-hidden="true">...</span>
           </button>
         </div>
       )}
