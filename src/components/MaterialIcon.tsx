@@ -8,6 +8,7 @@ import chatIcon from '@material-design-icons/svg/outlined/chat.svg?raw'
 import chevronRightIcon from '@material-design-icons/svg/outlined/chevron_right.svg?raw'
 import closeIcon from '@material-design-icons/svg/outlined/close.svg?raw'
 import datasetIcon from '@material-design-icons/svg/outlined/dataset.svg?raw'
+import deleteIcon from '@material-design-icons/svg/outlined/delete.svg?raw'
 import descriptionIcon from '@material-design-icons/svg/outlined/description.svg?raw'
 import editIcon from '@material-design-icons/svg/outlined/edit.svg?raw'
 import errorIcon from '@material-design-icons/svg/outlined/error.svg?raw'
@@ -45,6 +46,7 @@ const iconSources = {
   chevronRight: chevronRightIcon,
   close: closeIcon,
   dataset: datasetIcon,
+  delete: deleteIcon,
   description: descriptionIcon,
   edit: editIcon,
   error: errorIcon,

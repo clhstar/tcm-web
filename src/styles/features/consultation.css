@@ -217,9 +217,16 @@
   flex: 0 0 auto;
   display: grid;
   place-items: center;
+  border: 0;
   border-radius: 8px;
+  padding: 0;
   color: var(--app-text-muted);
   background: transparent;
+}
+
+.consultation-title-more:hover {
+  color: var(--app-text);
+  background: #f2f4f7;
 }
 
 .consultation-title-more .material-icon {

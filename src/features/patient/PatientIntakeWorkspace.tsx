@@ -15,7 +15,11 @@ import {
 } from '../../api/consultation'
 import { getPatient, type Patient } from '../../api/patient'
 import { ConsultationChatPanel } from '../consultation/ConsultationChatPanel'
-import { conversationKeys } from '../consultation/conversationQueries'
+import {
+  conversationKeys,
+  useDeleteConversation,
+  useRenameConversation,
+} from '../consultation/conversationQueries'
 import { ConsultationSummaryPanel } from '../consultation/ConsultationSummaryPanel'
 import { useConsultationStream } from '../consultation/stream/useConsultationStream'
 import { MaterialIcon } from '../../components/MaterialIcon'
@@ -53,6 +57,8 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
   const navigate = useNavigate()
   const routeConsultationId = readPositiveId(useParams().consultationId)
   const notify = useNotification()
+  const renameConversation = useRenameConversation()
+  const deleteConversation = useDeleteConversation()
   const patientQuery = usePatients(1, PAGE_SIZE)
   const patients = patientQuery.data?.records ?? []
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
@@ -572,6 +578,31 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
     }
   }
 
+  async function handleRenameConversation(id: number, title: string) {
+    const renamed = await renameConversation.mutateAsync({ id, title })
+    if (activeConsultationIdRef.current === id) {
+      setActiveConsultation((current) =>
+        current?.id === id
+          ? {
+              ...current,
+              title: renamed.title,
+              chiefComplaint: renamed.chiefComplaint,
+              updateTime: renamed.updateTime,
+            }
+          : current,
+      )
+    }
+    notify({ type: 'success', title: '对话已重命名', message: title })
+  }
+
+  async function handleDeleteConversation(id: number) {
+    await deleteConversation.mutateAsync(id)
+    notify({ type: 'success', title: '对话已删除', message: '这条对话已从记录中移除。' })
+    if (activeConsultationIdRef.current === id) {
+      openNewConsultationDraft()
+    }
+  }
+
   function invalidateStreamWork() {
     cancelConsultationStream()
   }
@@ -756,6 +787,8 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
                   onResumeRun={handleResumeRun}
                   onRetryRun={handleRetryRun}
                   onSend={handleSendMessage}
+                  onRename={handleRenameConversation}
+                  onDelete={handleDeleteConversation}
                 />
               ) : null}
             </div>

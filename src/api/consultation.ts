@@ -235,6 +235,18 @@ export async function getConsultation(id: number): Promise<Consultation> {
   return consultationResponseSchema.parse(payload).data
 }
 
+export async function renameConsultation(id: number, title: string): Promise<Consultation> {
+  const payload = await requestConsultation(conversationPath(id), {
+    method: 'PUT',
+    body: JSON.stringify({ title }),
+  })
+  return consultationResponseSchema.parse(payload).data
+}
+
+export async function deleteConsultation(id: number): Promise<void> {
+  await requestConsultation(conversationPath(id), { method: 'DELETE' })
+}
+
 export async function listConsultationMessages(id: number): Promise<TcmFlowMessage[]> {
   const payload = await requestConsultation(`${conversationPath(id)}/messages`)
   return consultationMessagesResponseSchema.parse(payload).data

@@ -357,6 +357,160 @@ button:disabled {
   color: #267b4e;
 }
 
+.conversation-action-menu {
+  position: fixed;
+  z-index: 120;
+  width: 184px;
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  padding: 6px;
+  background: var(--app-shell);
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.16);
+}
+
+.conversation-action-menu button {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  border-radius: 8px;
+  padding: 7px 9px;
+  color: var(--app-text);
+  background: transparent;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  text-align: left;
+}
+
+.conversation-action-menu button:hover {
+  background: #f2f4f7;
+}
+
+.conversation-action-menu button.danger {
+  color: #b42318;
+}
+
+.conversation-action-menu .material-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.conversation-action-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.18);
+}
+
+.conversation-action-dialog {
+  width: min(420px, 100%);
+  display: grid;
+  gap: 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  padding: 16px;
+  color: var(--app-text);
+  background: var(--app-shell);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.22);
+}
+
+.conversation-action-dialog header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.conversation-action-dialog h2 {
+  margin: 0;
+  font-size: var(--font-size-lead);
+  font-weight: var(--font-weight-bold);
+}
+
+.conversation-action-dialog header button {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  padding: 0;
+  color: var(--app-text-muted);
+  background: transparent;
+}
+
+.conversation-action-dialog header button:hover {
+  color: var(--app-text);
+  background: #f2f4f7;
+}
+
+.conversation-action-form {
+  display: grid;
+  gap: 11px;
+}
+
+.conversation-action-form label {
+  color: #344054;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+}
+
+.conversation-action-form input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  padding: 11px 12px;
+  color: var(--app-text);
+  background: var(--app-shell);
+}
+
+.conversation-action-form p {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: var(--font-size-body);
+  line-height: 1.55;
+}
+
+.conversation-action-form p[role='alert'] {
+  color: #b42318;
+}
+
+.conversation-action-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.conversation-action-dialog-actions button {
+  min-height: 36px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  padding: 0 13px;
+  color: var(--app-text);
+  background: var(--app-shell);
+  font-weight: var(--font-weight-semibold);
+}
+
+.conversation-action-dialog-actions button.primary {
+  border-color: #1f2937;
+  color: #ffffff;
+  background: #1f2937;
+}
+
+.conversation-action-dialog-actions button.danger {
+  border-color: #b42318;
+  color: #ffffff;
+  background: #b42318;
+}
+
 .app-notification strong,
 .app-notification p {
   margin: 0;

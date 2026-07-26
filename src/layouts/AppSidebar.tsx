@@ -2,8 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router'
 import { navigationItems } from '../app/navigation'
 import { MaterialIcon } from '../components/MaterialIcon'
+import { useNotification } from '../components/notificationContext'
 import { FRONTEND_VERSION } from '../config/global'
-import { useRecentConversations } from '../features/consultation/conversationQueries'
+import type { Consultation } from '../api/consultation'
+import { ConversationActions } from '../features/consultation/ConversationActionsMenu'
+import {
+  useDeleteConversation,
+  useRecentConversations,
+  useRenameConversation,
+} from '../features/consultation/conversationQueries'
 import { DesktopUpdateNotice } from '../features/desktop-update/DesktopUpdateNotice'
 import { useSystemVersions } from '../features/system-version/systemVersionQueries'
 
@@ -21,7 +28,10 @@ type AppSidebarProps = {
 export function AppSidebar({ isCollapsed, userName, onLogout, onToggle }: AppSidebarProps) {
   const location = useLocation()
   const navigate = useNavigate()
+  const notify = useNotification()
   const conversationQuery = useRecentConversations()
+  const renameConversation = useRenameConversation()
+  const deleteConversation = useDeleteConversation()
   const conversations = conversationQuery.data?.records ?? []
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false)
   const accountMenuRef = useRef<HTMLDivElement>(null)
@@ -65,6 +75,19 @@ export function AppSidebar({ isCollapsed, userName, onLogout, onToggle }: AppSid
     navigate('/login', { replace: true })
   }
 
+  async function renameSidebarConversation(id: number, title: string) {
+    await renameConversation.mutateAsync({ id, title })
+    notify({ type: 'success', title: '对话已重命名', message: title })
+  }
+
+  async function deleteSidebarConversation(id: number) {
+    await deleteConversation.mutateAsync(id)
+    notify({ type: 'success', title: '对话已删除', message: '这条对话已从记录中移除。' })
+    if (readConversationRouteId(location.pathname) === id) {
+      navigate(`/consultation/new?new=${Date.now()}`, { replace: true })
+    }
+  }
+
   return (
     <aside id="dashboard-sidebar" className="dashboard-sidebar" aria-label="主菜单">
       <div className="dashboard-brand">
@@ -106,20 +129,14 @@ export function AppSidebar({ isCollapsed, userName, onLogout, onToggle }: AppSid
           <span id="sidebar-conversations-title">对话记录</span>
         </div>
         <nav className="sidebar-conversation-list" aria-label="最近对话">
-          {conversations.map((consultation) => {
-            const title = consultation.chiefComplaint?.trim() || '新对话'
-            return (
-              <NavLink
-                key={consultation.id}
-                className={({ isActive }) => isActive ? 'sidebar-conversation-item active' : 'sidebar-conversation-item'}
-                to={`/consultation/${consultation.id}`}
-                aria-label={`打开对话：${title}`}
-                title={title}
-              >
-                <span>{title}</span>
-              </NavLink>
-            )
-          })}
+          {conversations.map((consultation) => (
+            <SidebarConversationItem
+              key={consultation.id}
+              consultation={consultation}
+              onDelete={deleteSidebarConversation}
+              onRename={renameSidebarConversation}
+            />
+          ))}
           {conversationQuery.isPending ? <span className="sidebar-conversation-empty">正在加载...</span> : null}
           {!conversationQuery.isPending && conversations.length === 0 ? (
             <span className="sidebar-conversation-empty">对话会自动保存在这里</span>
@@ -184,11 +201,62 @@ export function AppSidebar({ isCollapsed, userName, onLogout, onToggle }: AppSid
   )
 }
 
+function SidebarConversationItem({
+  consultation,
+  onRename,
+  onDelete,
+}: {
+  consultation: Consultation
+  onRename: (id: number, title: string) => Promise<void>
+  onDelete: (id: number) => Promise<void>
+}) {
+  const title = consultation.chiefComplaint?.trim() || '新对话'
+
+  return (
+    <ConversationActions
+      consultation={consultation}
+      title={title}
+      onRename={onRename}
+      onDelete={onDelete}
+    >
+      {({ setTriggerElement, openFromButton, openFromContextMenu }) => (
+        <div className="sidebar-conversation-row" onContextMenu={openFromContextMenu}>
+          <NavLink
+            className={({ isActive }) => isActive ? 'sidebar-conversation-item active' : 'sidebar-conversation-item'}
+            to={`/consultation/${consultation.id}`}
+            aria-label={`打开对话：${title}`}
+            title={title}
+          >
+            <span>{title}</span>
+          </NavLink>
+          <button
+            ref={setTriggerElement}
+            type="button"
+            className="sidebar-conversation-more"
+            aria-label={`打开对话菜单：${title}`}
+            title="对话菜单"
+            onClick={openFromButton}
+          >
+            <MaterialIcon name="moreHoriz" />
+          </button>
+        </div>
+      )}
+    </ConversationActions>
+  )
+}
+
 function isNavigationItemActive(to: string, match: string[], pathname: string) {
   if (to === '/consultation') {
     return pathname === '/consultation' || pathname === '/consultation/new'
   }
   return match.some((path) => pathname.startsWith(path))
+}
+
+function readConversationRouteId(pathname: string) {
+  const match = pathname.match(/^\/consultation\/(\d+)$/)
+  if (!match) return null
+  const id = Number(match[1])
+  return Number.isInteger(id) ? id : null
 }
 
 function readAvatarLabel(userName: string) {

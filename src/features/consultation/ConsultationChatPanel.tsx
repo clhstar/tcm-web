@@ -17,6 +17,7 @@ import {
   ConsultationMessageArtifacts,
 } from './ConsultationFilesPanel'
 import { useConsultationFiles } from './useConsultationFiles'
+import { ConversationActions } from './ConversationActionsMenu'
 
 const TCM_FLOW_PENDING_MESSAGE = '正在连接 tcm-flow...'
 const COLLABORATION_STATUS_LABELS: Readonly<Record<CollaborationStatus, string>> = {
@@ -57,6 +58,8 @@ type ConsultationChatPanelProps = {
   onResumeRun: () => Promise<void>
   onRetryRun: () => Promise<void>
   onSend: () => Promise<void>
+  onRename?: (id: number, title: string) => Promise<void>
+  onDelete?: (id: number) => Promise<void>
 }
 
 export function ConsultationChatPanel({
@@ -89,6 +92,8 @@ export function ConsultationChatPanel({
   onResumeRun,
   onRetryRun,
   onSend,
+  onRename,
+  onDelete,
 }: ConsultationChatPanelProps) {
   const [expandedThinkingMessageId, setExpandedThinkingMessageId] = useState<number | null>(null)
   const isTerminalConsultation =
@@ -131,9 +136,17 @@ export function ConsultationChatPanel({
         <div className="consultation-title-cluster">
           <MaterialIcon name="chat" />
           <h3>{consultation?.chiefComplaint || '尚未开始问诊'}</h3>
-          <span className="consultation-title-more" aria-hidden="true">
-            <MaterialIcon name="moreHoriz" />
-          </span>
+          {consultation && onRename && onDelete ? (
+            <ConversationTitleActions
+              consultation={consultation}
+              onRename={onRename}
+              onDelete={onDelete}
+            />
+          ) : (
+            <span className="consultation-title-more" aria-hidden="true">
+              <MaterialIcon name="moreHoriz" />
+            </span>
+          )}
         </div>
         <strong>{consultationContext ? statusLabel(consultationContext.status) : consultation?.statusName || '待创建'}</strong>
       </div>
@@ -306,6 +319,40 @@ export function ConsultationChatPanel({
         </div>
       )}
     </section>
+  )
+}
+
+function ConversationTitleActions({
+  consultation,
+  onRename,
+  onDelete,
+}: {
+  consultation: Consultation
+  onRename: (id: number, title: string) => Promise<void>
+  onDelete: (id: number) => Promise<void>
+}) {
+  const title = consultation.chiefComplaint?.trim() || '新对话'
+
+  return (
+    <ConversationActions
+      consultation={consultation}
+      title={title}
+      onRename={onRename}
+      onDelete={onDelete}
+    >
+      {({ setTriggerElement, openFromButton }) => (
+        <button
+          ref={setTriggerElement}
+          type="button"
+          className="consultation-title-more"
+          aria-label={`打开对话菜单：${title}`}
+          title="对话菜单"
+          onClick={openFromButton}
+        >
+          <MaterialIcon name="moreHoriz" />
+        </button>
+      )}
+    </ConversationActions>
   )
 }
 
