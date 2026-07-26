@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { useLocation, useNavigate, useParams } from 'react-router'
+import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useLocation, useNavigate, useParams } from "react-router";
 import {
   completeConsultation,
   cancelConversationConsultation,
@@ -12,20 +12,20 @@ import {
   pauseConversationConsultation,
   type ConsultationContext,
   type Consultation,
-} from '../../api/consultation'
-import { getPatient, type Patient } from '../../api/patient'
-import { ConsultationChatPanel } from '../consultation/ConsultationChatPanel'
+} from "../../api/consultation";
+import { getPatient, type Patient } from "../../api/patient";
+import { ConsultationChatPanel } from "../consultation/ConsultationChatPanel";
 import {
   conversationKeys,
   useDeleteConversation,
   useRenameConversation,
-} from '../consultation/conversationQueries'
-import { ConsultationSummaryPanel } from '../consultation/ConsultationSummaryPanel'
-import { useConsultationStream } from '../consultation/stream/useConsultationStream'
-import { MaterialIcon } from '../../components/MaterialIcon'
-import { useNotification } from '../../components/notificationContext'
-import { ArchiveSheet } from './components/ArchiveSheet'
-import { usePatients } from './patientQueries'
+} from "../consultation/conversationQueries";
+import { ConsultationSummaryPanel } from "../consultation/ConsultationSummaryPanel";
+import { useConsultationStream } from "../consultation/stream/useConsultationStream";
+import { MaterialIcon } from "../../components/MaterialIcon";
+import { useNotification } from "../../components/notificationContext";
+import { ArchiveSheet } from "./components/ArchiveSheet";
+import { usePatients } from "./patientQueries";
 import {
   applyConsultationContext,
   emptyConversationState,
@@ -33,53 +33,58 @@ import {
   messagePatientId,
   restoreConversationState,
   type ConsultationWorkspaceState,
-} from './consultationWorkspaceState'
+} from "./consultationWorkspaceState";
 
-export type WorkspaceView = 'chat' | 'summary'
-type ConsultationMutationKind = 'stream' | 'complete' | 'pause' | 'cancel'
+export type WorkspaceView = "chat" | "summary";
+type ConsultationMutationKind = "stream" | "complete" | "pause" | "cancel";
 type ConsultationMutationOwner = {
-  id: number
-  consultationId: number
-  kind: ConsultationMutationKind
-}
-const PAGE_SIZE = 10
-const CONSULTATION_PAGE_SIZE = 10
-const FALLBACK_PATIENT_ERROR = '患者列表加载失败，请稍后重试。'
-const FALLBACK_CONSULTATION_ERROR = '问诊处理失败，请稍后重试。'
-const HISTORY_LOAD_ERROR = '历史问诊暂时无法载入，请稍后重试。'
+  id: number;
+  consultationId: number;
+  kind: ConsultationMutationKind;
+};
+const PAGE_SIZE = 10;
+const CONSULTATION_PAGE_SIZE = 10;
+const FALLBACK_PATIENT_ERROR = "患者列表加载失败，请稍后重试。";
+const FALLBACK_CONSULTATION_ERROR = "问诊处理失败，请稍后重试。";
+const HISTORY_LOAD_ERROR = "历史问诊暂时无法载入，请稍后重试。";
 type PatientIntakeWorkspaceProps = {
-  view?: WorkspaceView
-}
+  view?: WorkspaceView;
+};
 
-export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspaceProps) {
-  const queryClient = useQueryClient()
-  const location = useLocation()
-  const navigate = useNavigate()
-  const routeConsultationId = readPositiveId(useParams().consultationId)
-  const notify = useNotification()
-  const renameConversation = useRenameConversation()
-  const deleteConversation = useDeleteConversation()
-  const patientQuery = usePatients(1, PAGE_SIZE)
-  const patients = patientQuery.data?.records ?? []
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
-  const [isArchiveSheetOpen, setIsArchiveSheetOpen] = useState(false)
-  const isLoading = patientQuery.isPending || patientQuery.isFetching
+export function PatientIntakeWorkspace({
+  view = "chat",
+}: PatientIntakeWorkspaceProps) {
+  const queryClient = useQueryClient();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const routeConsultationId = readPositiveId(useParams().consultationId);
+  const notify = useNotification();
+  const renameConversation = useRenameConversation();
+  const deleteConversation = useDeleteConversation();
+  const patientQuery = usePatients(1, PAGE_SIZE);
+  const patients = patientQuery.data?.records ?? [];
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [isArchiveSheetOpen, setIsArchiveSheetOpen] = useState(false);
+  const isLoading = patientQuery.isPending || patientQuery.isFetching;
 
-  const [chiefComplaint, setChiefComplaint] = useState('')
-  const [isDraftingConsultation, setIsDraftingConsultation] = useState(false)
-  const [activeConsultation, setActiveConsultation] = useState<Consultation | null>(null)
-  const [messageDraft, setMessageDraft] = useState('')
-  const [taggedPatient, setTaggedPatient] = useState<Patient | null>(null)
-  const [consultationContext, setConsultationContext] = useState<ConsultationContext | null>(null)
-  const [showTagSuggestion, setShowTagSuggestion] = useState(false)
-  const [isControllingConsultation, setIsControllingConsultation] = useState(false)
-  const [, setConsultationError] = useState('')
-  const [historyLoadError, setHistoryLoadError] = useState('')
-  const [isConsultationLoading, setIsConsultationLoading] = useState(false)
-  const [isMessageLoading, setIsMessageLoading] = useState(false)
-  const [isCreatingConsultation, setIsCreatingConsultation] = useState(false)
-  const [isCompleting, setIsCompleting] = useState(false)
-  const [fileRefreshKey, setFileRefreshKey] = useState(0)
+  const [chiefComplaint, setChiefComplaint] = useState("");
+  const [isDraftingConsultation, setIsDraftingConsultation] = useState(false);
+  const [activeConsultation, setActiveConsultation] =
+    useState<Consultation | null>(null);
+  const [messageDraft, setMessageDraft] = useState("");
+  const [taggedPatient, setTaggedPatient] = useState<Patient | null>(null);
+  const [consultationContext, setConsultationContext] =
+    useState<ConsultationContext | null>(null);
+  const [showTagSuggestion, setShowTagSuggestion] = useState(false);
+  const [isControllingConsultation, setIsControllingConsultation] =
+    useState(false);
+  const [, setConsultationError] = useState("");
+  const [historyLoadError, setHistoryLoadError] = useState("");
+  const [isConsultationLoading, setIsConsultationLoading] = useState(false);
+  const [isMessageLoading, setIsMessageLoading] = useState(false);
+  const [isCreatingConsultation, setIsCreatingConsultation] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [fileRefreshKey, setFileRefreshKey] = useState(0);
   const {
     messages,
     eventsByMessageId: tcmFlowEventsByMessageId,
@@ -97,346 +102,379 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
     restoreHistory: restoreConsultationHistory,
     retryRun: retryCurrentRun,
     send: sendConsultationMessage,
-  } = useConsultationStream()
-  const selectedPatientIdRef = useRef<number | null>(null)
-  const activeConsultationIdRef = useRef<number | null>(null)
-  const consultationLoadGenerationRef = useRef(0)
-  const messageLoadGenerationRef = useRef(0)
-  const consultationActionGenerationRef = useRef(0)
-  const consultationLoadingRef = useRef(false)
-  const messageLoadingRef = useRef(false)
-  const consultationMutationRef = useRef<ConsultationMutationOwner | null>(null)
-  const consultationMutationSequenceRef = useRef(0)
-  const newConversationTokenRef = useRef<string | null>(null)
-  const consultationContextRef = useRef<ConsultationContext | null>(null)
-  const activeView = view
+  } = useConsultationStream();
+  const selectedPatientIdRef = useRef<number | null>(null);
+  const activeConsultationIdRef = useRef<number | null>(null);
+  const consultationLoadGenerationRef = useRef(0);
+  const messageLoadGenerationRef = useRef(0);
+  const consultationActionGenerationRef = useRef(0);
+  const consultationLoadingRef = useRef(false);
+  const messageLoadingRef = useRef(false);
+  const consultationMutationRef = useRef<ConsultationMutationOwner | null>(
+    null
+  );
+  const consultationMutationSequenceRef = useRef(0);
+  const newConversationTokenRef = useRef<string | null>(null);
+  const consultationContextRef = useRef<ConsultationContext | null>(null);
+  const activeView = view;
 
   useEffect(() => {
-    const firstPatient = patientQuery.data?.records[0]
-    if (routeConsultationId !== null || !firstPatient || selectedPatientIdRef.current !== null) {
-      return
+    const firstPatient = patientQuery.data?.records[0];
+    if (
+      routeConsultationId !== null ||
+      !firstPatient ||
+      selectedPatientIdRef.current !== null
+    ) {
+      return;
     }
-    selectedPatientIdRef.current = firstPatient.id
-    setSelectedPatient(firstPatient)
-  }, [patientQuery.data, routeConsultationId])
+    selectedPatientIdRef.current = firstPatient.id;
+    setSelectedPatient(firstPatient);
+  }, [patientQuery.data, routeConsultationId]);
 
   useEffect(() => {
     if (
       routeConsultationId === null ||
       activeConsultationIdRef.current === routeConsultationId
-    ) return
-    void loadRoutedConsultation(routeConsultationId)
+    )
+      return;
+    void loadRoutedConsultation(routeConsultationId);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Route identity owns this load lifecycle.
-  }, [routeConsultationId])
+  }, [routeConsultationId]);
 
   useEffect(() => {
-    if (!patientQuery.error) return
+    if (!patientQuery.error) return;
     notify({
-      type: 'error',
-      title: '患者档案提示',
-      message: patientQuery.error instanceof Error ? patientQuery.error.message : FALLBACK_PATIENT_ERROR,
-    })
-  }, [notify, patientQuery.error])
+      type: "error",
+      title: "患者档案提示",
+      message:
+        patientQuery.error instanceof Error
+          ? patientQuery.error.message
+          : FALLBACK_PATIENT_ERROR,
+    });
+  }, [notify, patientQuery.error]);
 
   useEffect(() => {
-    if (routeConsultationId !== null || location.pathname === '/consultation/new') return
-    void loadConversations()
+    if (
+      routeConsultationId !== null ||
+      location.pathname === "/consultation/new"
+    )
+      return;
+    void loadConversations();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Route identity owns this load lifecycle.
-  }, [location.pathname, routeConsultationId])
+  }, [location.pathname, routeConsultationId]);
 
   useEffect(() => {
     const token =
-      location.pathname === '/consultation/new'
+      location.pathname === "/consultation/new"
         ? location.key
-        : new URLSearchParams(location.search).get('new')
+        : new URLSearchParams(location.search).get("new");
     if (!token || newConversationTokenRef.current === token) {
-      return
+      return;
     }
-    newConversationTokenRef.current = token
-    openNewConsultationDraft()
+    newConversationTokenRef.current = token;
+    openNewConsultationDraft();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.key, location.pathname, location.search])
+  }, [location.key, location.pathname, location.search]);
 
   function showConsultationError(message: string) {
-    setConsultationError(message)
+    setConsultationError(message);
     notify({
-      type: 'error',
-      title: '问诊提示',
+      type: "error",
+      title: "问诊提示",
       message,
-    })
+    });
   }
 
-  async function resolveConversationPatient(consultation: Consultation): Promise<Patient | null> {
-    if (consultation.patientId === null) return null
+  async function resolveConversationPatient(
+    consultation: Consultation
+  ): Promise<Patient | null> {
+    if (consultation.patientId === null) return null;
     const cachedPatient = patientQuery.data?.records.find(
-      (patient) => patient.id === consultation.patientId,
-    )
-    return cachedPatient ?? getPatient(consultation.patientId)
+      (patient) => patient.id === consultation.patientId
+    );
+    return cachedPatient ?? getPatient(consultation.patientId);
   }
 
   function applyWorkspaceState(state: ConsultationWorkspaceState) {
-    consultationContextRef.current = state.consultationContext
-    setConsultationContext(state.consultationContext)
-    setTaggedPatient(state.taggedPatient)
-    setShowTagSuggestion(state.showTagSuggestion)
+    consultationContextRef.current = state.consultationContext;
+    setConsultationContext(state.consultationContext);
+    setTaggedPatient(state.taggedPatient);
+    setShowTagSuggestion(state.showTagSuggestion);
   }
 
   function synchronizeConsultationContext(
     context: ConsultationContext,
-    contextPatient: Patient | null,
+    contextPatient: Patient | null
   ) {
-    const currentContext = consultationContextRef.current
-    if (currentContext && context.record_version < currentContext.record_version) return
+    const currentContext = consultationContextRef.current;
+    if (
+      currentContext &&
+      context.record_version < currentContext.record_version
+    )
+      return;
 
-    applyWorkspaceState(applyConsultationContext(context, contextPatient))
-    if (context.status === 'IN_PROGRESS' && contextPatient) {
-      selectedPatientIdRef.current = contextPatient.id
-      setSelectedPatient(contextPatient)
+    applyWorkspaceState(applyConsultationContext(context, contextPatient));
+    if (context.status === "IN_PROGRESS" && contextPatient) {
+      selectedPatientIdRef.current = contextPatient.id;
+      setSelectedPatient(contextPatient);
     }
 
-    const activeId = activeConsultationIdRef.current
-    if (activeId === null) return
+    const activeId = activeConsultationIdRef.current;
+    if (activeId === null) return;
     setActiveConsultation((current) => {
-      if (!current || current.id !== activeId) return current
-      return mergeConsultationContext(current, context, contextPatient)
-    })
-    void queryClient.invalidateQueries({ queryKey: conversationKeys.all })
+      if (!current || current.id !== activeId) return current;
+      return mergeConsultationContext(current, context, contextPatient);
+    });
+    void queryClient.invalidateQueries({ queryKey: conversationKeys.all });
   }
 
   async function loadConversations(
-    preferredConsultation?: Consultation | null,
+    preferredConsultation?: Consultation | null
   ) {
-    const generation = ++consultationLoadGenerationRef.current
-    ++messageLoadGenerationRef.current
-    messageLoadingRef.current = false
-    setIsMessageLoading(false)
-    consultationLoadingRef.current = true
-    setIsConsultationLoading(true)
-    setConsultationError('')
+    const generation = ++consultationLoadGenerationRef.current;
+    ++messageLoadGenerationRef.current;
+    messageLoadingRef.current = false;
+    setIsMessageLoading(false);
+    consultationLoadingRef.current = true;
+    setIsConsultationLoading(true);
+    setConsultationError("");
     try {
       const result = await listConsultations({
         pageNum: 1,
         pageSize: CONSULTATION_PAGE_SIZE,
-      })
+      });
       if (!isCurrentConsultationLoad(generation)) {
-        return
+        return;
       }
       const nextConsultation =
         preferredConsultation ??
-        result.records.find((item) => item.id === activeConsultationIdRef.current) ??
+        result.records.find(
+          (item) => item.id === activeConsultationIdRef.current
+        ) ??
         result.records[0] ??
-        null
+        null;
 
-      activeConsultationIdRef.current = nextConsultation?.id ?? null
-      setActiveConsultation(nextConsultation)
+      activeConsultationIdRef.current = nextConsultation?.id ?? null;
+      setActiveConsultation(nextConsultation);
       if (nextConsultation) {
-        const patient = await resolveConversationPatient(nextConsultation)
-        if (!isCurrentConsultationLoad(generation)) return
+        const patient = await resolveConversationPatient(nextConsultation);
+        if (!isCurrentConsultationLoad(generation)) return;
         if (patient) {
-          selectedPatientIdRef.current = patient.id
-          setSelectedPatient(patient)
+          selectedPatientIdRef.current = patient.id;
+          setSelectedPatient(patient);
         }
-        applyWorkspaceState(restoreConversationState(nextConsultation, patient))
-        await loadMessages(nextConsultation.id)
+        applyWorkspaceState(
+          restoreConversationState(nextConsultation, patient)
+        );
+        await loadMessages(nextConsultation.id);
       } else {
-        applyWorkspaceState(emptyConversationState())
-        resetConsultationStream()
+        applyWorkspaceState(emptyConversationState());
+        resetConsultationStream();
       }
     } catch (loadError) {
       if (!isCurrentConsultationLoad(generation)) {
-        return
+        return;
       }
-      showConsultationError(loadError instanceof Error ? loadError.message : FALLBACK_CONSULTATION_ERROR)
-      setActiveConsultation(null)
-      applyWorkspaceState(emptyConversationState())
-      resetConsultationStream()
+      showConsultationError(
+        loadError instanceof Error
+          ? loadError.message
+          : FALLBACK_CONSULTATION_ERROR
+      );
+      setActiveConsultation(null);
+      applyWorkspaceState(emptyConversationState());
+      resetConsultationStream();
     } finally {
       if (isCurrentConsultationLoad(generation)) {
-        consultationLoadingRef.current = false
-        setIsConsultationLoading(false)
+        consultationLoadingRef.current = false;
+        setIsConsultationLoading(false);
       }
     }
   }
 
   async function loadRoutedConsultation(consultationId: number) {
-    invalidateConsultationMutation()
-    activeConsultationIdRef.current = consultationId
-    resetConsultationStream()
-    const generation = ++consultationLoadGenerationRef.current
-    ++messageLoadGenerationRef.current
-    consultationLoadingRef.current = true
-    setIsConsultationLoading(true)
-    setIsMessageLoading(true)
-    setConsultationError('')
+    invalidateConsultationMutation();
+    activeConsultationIdRef.current = consultationId;
+    resetConsultationStream();
+    const generation = ++consultationLoadGenerationRef.current;
+    ++messageLoadGenerationRef.current;
+    consultationLoadingRef.current = true;
+    setIsConsultationLoading(true);
+    setIsMessageLoading(true);
+    setConsultationError("");
     try {
       const [consultation, historyMessages] = await Promise.all([
         getConsultation(consultationId),
         listConsultationMessages(consultationId),
-      ])
-      if (generation !== consultationLoadGenerationRef.current) return
+      ]);
+      if (generation !== consultationLoadGenerationRef.current) return;
 
-      const patient = await resolveConversationPatient(consultation)
-      if (generation !== consultationLoadGenerationRef.current) return
+      const patient = await resolveConversationPatient(consultation);
+      if (generation !== consultationLoadGenerationRef.current) return;
 
-      selectedPatientIdRef.current = patient?.id ?? null
-      activeConsultationIdRef.current = consultation.id
-      setSelectedPatient(patient)
-      setActiveConsultation(consultation)
-      applyWorkspaceState(restoreConversationState(consultation, patient))
-      restoreConsultationHistory(consultation.id, historyMessages)
-      startRunRecovery(consultation.id)
-      setIsDraftingConsultation(false)
+      selectedPatientIdRef.current = patient?.id ?? null;
+      activeConsultationIdRef.current = consultation.id;
+      setSelectedPatient(patient);
+      setActiveConsultation(consultation);
+      applyWorkspaceState(restoreConversationState(consultation, patient));
+      restoreConsultationHistory(consultation.id, historyMessages);
+      startRunRecovery(consultation.id);
+      setIsDraftingConsultation(false);
     } catch (loadError) {
-      if (generation !== consultationLoadGenerationRef.current) return
-      setActiveConsultation(null)
-      applyWorkspaceState(emptyConversationState())
-      resetConsultationStream()
+      if (generation !== consultationLoadGenerationRef.current) return;
+      setActiveConsultation(null);
+      applyWorkspaceState(emptyConversationState());
+      resetConsultationStream();
       showConsultationError(
-        loadError instanceof Error ? loadError.message : FALLBACK_CONSULTATION_ERROR,
-      )
+        loadError instanceof Error
+          ? loadError.message
+          : FALLBACK_CONSULTATION_ERROR
+      );
     } finally {
       if (generation === consultationLoadGenerationRef.current) {
-        consultationLoadingRef.current = false
-        messageLoadingRef.current = false
-        setIsConsultationLoading(false)
-        setIsMessageLoading(false)
+        consultationLoadingRef.current = false;
+        messageLoadingRef.current = false;
+        setIsConsultationLoading(false);
+        setIsMessageLoading(false);
       }
     }
   }
 
   async function loadMessages(consultationId: number) {
-    const generation = ++messageLoadGenerationRef.current
-    messageLoadingRef.current = true
-    setIsMessageLoading(true)
-    setHistoryLoadError('')
+    const generation = ++messageLoadGenerationRef.current;
+    messageLoadingRef.current = true;
+    setIsMessageLoading(true);
+    setHistoryLoadError("");
     try {
-      const historyMessages = await listConsultationMessages(consultationId)
+      const historyMessages = await listConsultationMessages(consultationId);
       if (!isCurrentMessageLoad(generation, consultationId)) {
-        return
+        return;
       }
-      restoreConsultationHistory(consultationId, historyMessages)
-      startRunRecovery(consultationId)
+      restoreConsultationHistory(consultationId, historyMessages);
+      startRunRecovery(consultationId);
     } catch (loadError) {
       if (!isCurrentMessageLoad(generation, consultationId)) {
-        return
+        return;
       }
-      const message = readHistoryLoadError(loadError)
-      setHistoryLoadError(message)
+      const message = readHistoryLoadError(loadError);
+      setHistoryLoadError(message);
       notify({
-        type: 'error',
-        title: '问诊记录加载失败',
+        type: "error",
+        title: "问诊记录加载失败",
         message,
-      })
+      });
     } finally {
       if (isCurrentMessageLoad(generation, consultationId)) {
-        messageLoadingRef.current = false
-        setIsMessageLoading(false)
+        messageLoadingRef.current = false;
+        setIsMessageLoading(false);
       }
     }
   }
 
   function selectPatientFromSheet(patient: Patient) {
     if (
-      consultationContext?.status === 'COMPLETED' ||
-      consultationContext?.status === 'CANCELLED'
+      consultationContext?.status === "COMPLETED" ||
+      consultationContext?.status === "CANCELLED"
     ) {
-      setIsArchiveSheetOpen(false)
-      showConsultationError('当前问诊已经结束，请新建对话后再添加问诊标签。')
-      return
+      setIsArchiveSheetOpen(false);
+      showConsultationError("当前问诊已经结束，请新建对话后再添加问诊标签。");
+      return;
     }
-    if (activeConsultation?.patientId && activeConsultation.patientId !== patient.id) {
-      showConsultationError('当前对话已绑定其他患者，请新建对话后再切换。')
-      return
+    if (
+      activeConsultation?.patientId &&
+      activeConsultation.patientId !== patient.id
+    ) {
+      showConsultationError("当前对话已绑定其他患者，请新建对话后再切换。");
+      return;
     }
-    setTaggedPatient(patient)
-    setShowTagSuggestion(false)
-    setIsArchiveSheetOpen(false)
+    setTaggedPatient(patient);
+    setShowTagSuggestion(false);
+    setIsArchiveSheetOpen(false);
   }
 
   function openCreateForm() {
-    setIsArchiveSheetOpen(false)
-    navigate('/patients/new')
+    setIsArchiveSheetOpen(false);
+    navigate("/patients/new");
   }
 
   function openNewConsultationDraft() {
-    if (location.pathname !== '/consultation/new') {
-      navigate(`/consultation/new?new=${Date.now()}`)
-      return
+    if (location.pathname !== "/consultation/new") {
+      navigate(`/consultation/new?new=${Date.now()}`);
+      return;
     }
-    invalidateConsultationWork()
-    activeConsultationIdRef.current = null
-    consultationLoadingRef.current = false
-    messageLoadingRef.current = false
-    invalidateConsultationMutation()
-    setIsConsultationLoading(false)
-    setIsMessageLoading(false)
-    setIsCompleting(false)
-    setChiefComplaint('')
-    setActiveConsultation(null)
-    resetConsultationStream()
-    setMessageDraft('')
-    setConsultationError('')
-    setHistoryLoadError('')
-    applyWorkspaceState(emptyConversationState())
-    setIsDraftingConsultation(true)
+    invalidateConsultationWork();
+    activeConsultationIdRef.current = null;
+    consultationLoadingRef.current = false;
+    messageLoadingRef.current = false;
+    invalidateConsultationMutation();
+    setIsConsultationLoading(false);
+    setIsMessageLoading(false);
+    setIsCompleting(false);
+    setChiefComplaint("");
+    setActiveConsultation(null);
+    resetConsultationStream();
+    setMessageDraft("");
+    setConsultationError("");
+    setHistoryLoadError("");
+    applyWorkspaceState(emptyConversationState());
+    setIsDraftingConsultation(true);
   }
 
   function answerWithoutArchive() {
-    setIsArchiveSheetOpen(false)
+    setIsArchiveSheetOpen(false);
     if (
       activeConsultation &&
       taggedPatient &&
-      consultationContext?.status === 'IN_PROGRESS'
+      consultationContext?.status === "IN_PROGRESS"
     ) {
-      void handleRemoveConsultationTag()
-      return
+      void handleRemoveConsultationTag();
+      return;
     }
-    setTaggedPatient(null)
+    setTaggedPatient(null);
   }
 
   async function handleStartConsultation() {
-    const normalizedComplaint = chiefComplaint.trim()
+    const normalizedComplaint = chiefComplaint.trim();
     if (!normalizedComplaint) {
-      showConsultationError('请先记录本次主诉，再开始问诊。')
-      return
+      showConsultationError("请先记录本次主诉，再开始问诊。");
+      return;
     }
 
-    const explicitTag = taggedPatient
-    const generation = ++consultationLoadGenerationRef.current
-    setIsCreatingConsultation(true)
-    setConsultationError('')
+    const explicitTag = taggedPatient;
+    const generation = ++consultationLoadGenerationRef.current;
+    setIsCreatingConsultation(true);
+    setConsultationError("");
     try {
       const consultation = await createConsultation({
         patientId: selectedPatient?.id,
         chiefComplaint: normalizedComplaint,
-      })
+      });
       if (!isCurrentConsultationLoad(generation)) {
-        return
+        return;
       }
       const nextConsultation = {
         ...consultation,
         updateTime: consultation.updateTime,
-      }
-      activeConsultationIdRef.current = nextConsultation.id
-      setChiefComplaint('')
-      setActiveConsultation(nextConsultation)
-      setTaggedPatient(explicitTag)
-      void queryClient.invalidateQueries({ queryKey: conversationKeys.all })
-      resetConsultationStream()
-      setIsDraftingConsultation(false)
-      navigate(`/consultation/${nextConsultation.id}`, { replace: true })
+      };
+      activeConsultationIdRef.current = nextConsultation.id;
+      setChiefComplaint("");
+      setActiveConsultation(nextConsultation);
+      setTaggedPatient(explicitTag);
+      void queryClient.invalidateQueries({ queryKey: conversationKeys.all });
+      resetConsultationStream();
+      setIsDraftingConsultation(false);
+      navigate(`/consultation/${nextConsultation.id}`, { replace: true });
       await runTcmFlowChat(nextConsultation, normalizedComplaint, {
         replaceMessages: true,
         taggedPatient: explicitTag,
-      })
+      });
     } catch {
       if (!isCurrentConsultationLoad(generation)) {
-        return
+        return;
       }
-      showConsultationError(FALLBACK_CONSULTATION_ERROR)
+      showConsultationError(FALLBACK_CONSULTATION_ERROR);
     } finally {
       if (isCurrentConsultationLoad(generation)) {
-        setIsCreatingConsultation(false)
+        setIsCreatingConsultation(false);
       }
     }
   }
@@ -450,94 +488,125 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
       isRunBlocking ||
       consultationMutationRef.current !== null
     ) {
-      return
+      return;
     }
 
-    const normalizedDraft = messageDraft.trim()
+    const normalizedDraft = messageDraft.trim();
     if (!normalizedDraft) {
-      showConsultationError('请先输入补充信息。')
-      return
+      showConsultationError("请先输入补充信息。");
+      return;
     }
 
-    setConsultationError('')
+    setConsultationError("");
     try {
-      setMessageDraft('')
-      const completedCurrentStream = await runTcmFlowChat(activeConsultation, normalizedDraft)
-      if (completedCurrentStream && activeConsultationIdRef.current === activeConsultation.id) {
+      setMessageDraft("");
+      const completedCurrentStream = await runTcmFlowChat(
+        activeConsultation,
+        normalizedDraft
+      );
+      if (
+        completedCurrentStream &&
+        activeConsultationIdRef.current === activeConsultation.id
+      ) {
         setActiveConsultation((current) =>
           current?.id === activeConsultation.id
-          ? {
-              ...current,
-              updateTime: formatNow(),
-            }
-          : current,
-        )
+            ? {
+                ...current,
+                updateTime: formatNow(),
+              }
+            : current
+        );
       }
     } catch {
       if (activeConsultationIdRef.current === activeConsultation.id) {
-        showConsultationError(FALLBACK_CONSULTATION_ERROR)
+        showConsultationError(FALLBACK_CONSULTATION_ERROR);
       }
     }
   }
 
   async function handleCancelRun() {
     try {
-      await cancelCurrentRun()
+      await cancelCurrentRun();
     } catch (error) {
-      showConsultationError(error instanceof Error ? error.message : '停止任务失败，请稍后重试。')
+      showConsultationError(
+        error instanceof Error ? error.message : "停止任务失败，请稍后重试。"
+      );
     }
   }
 
   async function handleRecoverableRunAction(
     action: () => Promise<unknown>,
-    fallbackMessage: string,
+    fallbackMessage: string
   ) {
     try {
-      await action()
+      await action();
     } catch (error) {
-      showConsultationError(error instanceof Error ? error.message : fallbackMessage)
+      showConsultationError(
+        error instanceof Error ? error.message : fallbackMessage
+      );
       if (activeConsultationIdRef.current !== null) {
-        startRunRecovery(activeConsultationIdRef.current)
+        startRunRecovery(activeConsultationIdRef.current);
       }
     }
   }
 
   function handleResumeRun() {
-    return handleRecoverableRunAction(resumeCurrentRun, '恢复任务失败，请稍后重试。')
+    return handleRecoverableRunAction(
+      resumeCurrentRun,
+      "恢复任务失败，请稍后重试。"
+    );
   }
 
   function handleRetryRun() {
-    return handleRecoverableRunAction(retryCurrentRun, '重试任务失败，请稍后重试。')
+    return handleRecoverableRunAction(
+      retryCurrentRun,
+      "重试任务失败，请稍后重试。"
+    );
   }
 
   async function handleRemoveConsultationTag() {
-    if (!activeConsultation || !taggedPatient || isControllingConsultation) return
-    if (!consultationContext || consultationContext.status !== 'IN_PROGRESS') {
-      setTaggedPatient(null)
-      setShowTagSuggestion(false)
-      return
+    if (!activeConsultation || !taggedPatient || isControllingConsultation)
+      return;
+    if (!consultationContext || consultationContext.status !== "IN_PROGRESS") {
+      setTaggedPatient(null);
+      setShowTagSuggestion(false);
+      return;
     }
-    setIsControllingConsultation(true)
+    setIsControllingConsultation(true);
     try {
-      const context = await pauseConversationConsultation(activeConsultation.id)
-      synchronizeConsultationContext(context, taggedPatient)
-      notify({ type: 'success', title: '问诊已暂停', message: '可继续发送普通消息，重新添加同一患者标签即可恢复。' })
+      const context = await pauseConversationConsultation(
+        activeConsultation.id
+      );
+      synchronizeConsultationContext(context, taggedPatient);
+      notify({
+        type: "success",
+        title: "问诊已暂停",
+        message: "可继续发送普通消息，重新添加同一患者标签即可恢复。",
+      });
     } catch (error) {
-      showConsultationError(error instanceof Error ? error.message : '暂停失败，问诊标签已保留。')
+      showConsultationError(
+        error instanceof Error ? error.message : "暂停失败，问诊标签已保留。"
+      );
     } finally {
-      setIsControllingConsultation(false)
+      setIsControllingConsultation(false);
     }
   }
 
   async function handleCancelConsultation() {
-    if (!activeConsultation || isControllingConsultation) return
-    setIsControllingConsultation(true)
+    if (!activeConsultation || isControllingConsultation) return;
+    setIsControllingConsultation(true);
     try {
-      const context = await cancelConversationConsultation(activeConsultation.id)
-      synchronizeConsultationContext(context, taggedPatient)
+      const context = await cancelConversationConsultation(
+        activeConsultation.id
+      );
+      synchronizeConsultationContext(context, taggedPatient);
     } catch (error) {
-      showConsultationError(error instanceof Error ? error.message : '取消问诊失败。')
-    } finally { setIsControllingConsultation(false) }
+      showConsultationError(
+        error instanceof Error ? error.message : "取消问诊失败。"
+      );
+    } finally {
+      setIsControllingConsultation(false);
+    }
   }
 
   async function handleCompleteConsultation() {
@@ -548,38 +617,45 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
       messageLoadingRef.current ||
       consultationMutationRef.current !== null
     ) {
-      return
+      return;
     }
 
-    const consultationId = activeConsultation.id
-    const mutationOwner = acquireConsultationMutation('complete', consultationId)
+    const consultationId = activeConsultation.id;
+    const mutationOwner = acquireConsultationMutation(
+      "complete",
+      consultationId
+    );
     if (!mutationOwner) {
-      return
+      return;
     }
-    const generation = ++consultationActionGenerationRef.current
-    setIsCompleting(true)
-    setConsultationError('')
+    const generation = ++consultationActionGenerationRef.current;
+    setIsCompleting(true);
+    setConsultationError("");
     try {
-      const context = await completeConsultation(consultationId)
+      const context = await completeConsultation(consultationId);
       if (!isCurrentConsultationAction(generation, consultationId)) {
-        return
+        return;
       }
-      synchronizeConsultationContext(context, taggedPatient)
+      synchronizeConsultationContext(context, taggedPatient);
     } catch (completeError) {
       if (!isCurrentConsultationAction(generation, consultationId)) {
-        return
+        return;
       }
-      showConsultationError(completeError instanceof Error ? completeError.message : FALLBACK_CONSULTATION_ERROR)
+      showConsultationError(
+        completeError instanceof Error
+          ? completeError.message
+          : FALLBACK_CONSULTATION_ERROR
+      );
     } finally {
       if (isCurrentConsultationAction(generation, consultationId)) {
-        setIsCompleting(false)
+        setIsCompleting(false);
       }
-      releaseConsultationMutation(mutationOwner)
+      releaseConsultationMutation(mutationOwner);
     }
   }
 
   async function handleRenameConversation(id: number, title: string) {
-    const renamed = await renameConversation.mutateAsync({ id, title })
+    const renamed = await renameConversation.mutateAsync({ id, title });
     if (activeConsultationIdRef.current === id) {
       setActiveConsultation((current) =>
         current?.id === id
@@ -589,91 +665,103 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
               chiefComplaint: renamed.chiefComplaint,
               updateTime: renamed.updateTime,
             }
-          : current,
-      )
+          : current
+      );
     }
-    notify({ type: 'success', title: '对话已重命名', message: title })
   }
 
   async function handleDeleteConversation(id: number) {
-    await deleteConversation.mutateAsync(id)
-    notify({ type: 'success', title: '对话已删除', message: '这条对话已从记录中移除。' })
+    await deleteConversation.mutateAsync(id);
+    notify({
+      type: "success",
+      title: "对话已删除",
+      message: "这条对话已从记录中移除。",
+    });
     if (activeConsultationIdRef.current === id) {
-      openNewConsultationDraft()
+      openNewConsultationDraft();
     }
   }
 
   function invalidateStreamWork() {
-    cancelConsultationStream()
+    cancelConsultationStream();
   }
 
   function invalidateConsultationWork() {
-    ++consultationLoadGenerationRef.current
-    ++messageLoadGenerationRef.current
-    ++consultationActionGenerationRef.current
-    setIsCreatingConsultation(false)
-    invalidateConsultationMutation()
-    invalidateStreamWork()
+    ++consultationLoadGenerationRef.current;
+    ++messageLoadGenerationRef.current;
+    ++consultationActionGenerationRef.current;
+    setIsCreatingConsultation(false);
+    invalidateConsultationMutation();
+    invalidateStreamWork();
   }
 
   function acquireConsultationMutation(
     kind: ConsultationMutationKind,
-    consultationId: number,
+    consultationId: number
   ): ConsultationMutationOwner | null {
     if (consultationMutationRef.current !== null) {
-      return null
+      return null;
     }
     const owner = {
       id: ++consultationMutationSequenceRef.current,
       consultationId,
       kind,
-    }
-    consultationMutationRef.current = owner
-    return owner
+    };
+    consultationMutationRef.current = owner;
+    return owner;
   }
 
   function releaseConsultationMutation(owner: ConsultationMutationOwner) {
     if (consultationMutationRef.current === owner) {
-      consultationMutationRef.current = null
+      consultationMutationRef.current = null;
     }
   }
 
   function invalidateConsultationMutation() {
-    consultationMutationRef.current = null
-    cancelConsultationStream()
-    setIsCompleting(false)
+    consultationMutationRef.current = null;
+    cancelConsultationStream();
+    setIsCompleting(false);
   }
 
   function isCurrentConsultationLoad(generation: number) {
-    return generation === consultationLoadGenerationRef.current
+    return generation === consultationLoadGenerationRef.current;
   }
 
   function isCurrentMessageLoad(generation: number, consultationId: number) {
     return (
       generation === messageLoadGenerationRef.current &&
       activeConsultationIdRef.current === consultationId
-    )
+    );
   }
 
-  function isCurrentConsultationAction(generation: number, consultationId: number) {
+  function isCurrentConsultationAction(
+    generation: number,
+    consultationId: number
+  ) {
     return (
       generation === consultationActionGenerationRef.current &&
       activeConsultationIdRef.current === consultationId
-    )
+    );
   }
 
   async function runTcmFlowChat(
     consultation: Consultation,
     content: string,
-    options: { replaceMessages?: boolean; taggedPatient?: Patient | null } = {},
+    options: { replaceMessages?: boolean; taggedPatient?: Patient | null } = {}
   ) {
-    const mutationOwner = acquireConsultationMutation('stream', consultation.id)
-    if (!mutationOwner) return false
+    const mutationOwner = acquireConsultationMutation(
+      "stream",
+      consultation.id
+    );
+    if (!mutationOwner) return false;
 
-    ++messageLoadGenerationRef.current
-    messageLoadingRef.current = false
-    setIsMessageLoading(false)
-    const messageTag = options.taggedPatient === undefined ? taggedPatient : options.taggedPatient
+    ++messageLoadGenerationRef.current;
+    messageLoadingRef.current = false;
+    setIsMessageLoading(false);
+    const messageTag =
+      options.taggedPatient === undefined
+        ? taggedPatient
+        : options.taggedPatient;
     try {
       return await sendConsultationMessage({
         consultation,
@@ -681,23 +769,37 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
         replaceMessages: options.replaceMessages,
         patientId: messagePatientId(messageTag),
         onConsultationContext: (context) => {
-          if (!isContextForActiveConversation(activeConsultationIdRef.current, consultation.id)) return
-          synchronizeConsultationContext(context, messageTag)
+          if (
+            !isContextForActiveConversation(
+              activeConsultationIdRef.current,
+              consultation.id
+            )
+          )
+            return;
+          synchronizeConsultationContext(context, messageTag);
         },
         onSuggestedAction: () => setShowTagSuggestion(true),
         onConversationTitle: (title) => {
-          if (!isContextForActiveConversation(activeConsultationIdRef.current, consultation.id)) return
-          setActiveConsultation((current) => (
+          if (
+            !isContextForActiveConversation(
+              activeConsultationIdRef.current,
+              consultation.id
+            )
+          )
+            return;
+          setActiveConsultation((current) =>
             current?.id === consultation.id
               ? { ...current, chiefComplaint: title }
               : current
-          ))
-          void queryClient.invalidateQueries({ queryKey: conversationKeys.all })
+          );
+          void queryClient.invalidateQueries({
+            queryKey: conversationKeys.all,
+          });
         },
         onRunSettled: () => refreshConversationAfterRun(consultation.id),
-      })
+      });
     } finally {
-      releaseConsultationMutation(mutationOwner)
+      releaseConsultationMutation(mutationOwner);
     }
   }
 
@@ -705,40 +807,59 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
     void recoverConsultationRun({
       consultationId,
       onRunSettled: () => refreshConversationAfterRun(consultationId),
-    })
+    });
   }
 
   async function refreshConversationAfterRun(consultationId: number) {
-    const refreshed = await getConsultation(consultationId)
-    if (activeConsultationIdRef.current !== consultationId) return
-    const patient = await resolveConversationPatient(refreshed)
-    if (activeConsultationIdRef.current !== consultationId) return
+    const refreshed = await getConsultation(consultationId);
+    if (activeConsultationIdRef.current !== consultationId) return;
+    const patient = await resolveConversationPatient(refreshed);
+    if (activeConsultationIdRef.current !== consultationId) return;
 
-    setActiveConsultation(refreshed)
-    void queryClient.invalidateQueries({ queryKey: conversationKeys.all })
-    applyWorkspaceState(restoreConversationState(refreshed, patient))
-    setFileRefreshKey((current) => current + 1)
+    setActiveConsultation(refreshed);
+    void queryClient.invalidateQueries({ queryKey: conversationKeys.all });
+    applyWorkspaceState(restoreConversationState(refreshed, patient));
+    setFileRefreshKey((current) => current + 1);
   }
 
-
-  const archiveLabel = selectedPatient ? `问诊患者：${selectedPatient.name}` : '选择档案'
+  const archiveLabel = selectedPatient
+    ? `问诊患者：${selectedPatient.name}`
+    : "选择档案";
   const isConsultationStarter =
-    activeView === 'chat' && (isDraftingConsultation || !activeConsultation)
+    activeView === "chat" && (isDraftingConsultation || !activeConsultation);
 
   return (
-    <section className={isConsultationStarter ? 'workspace-surface consultation-surface is-starter' : 'workspace-surface'}>
+    <section
+      className={
+        isConsultationStarter
+          ? "workspace-surface consultation-surface is-starter"
+          : "workspace-surface"
+      }
+    >
       <section
         className={[
-          'workspace-grid',
-          isConsultationStarter ? 'consultation-starter-grid' : '',
-        ].filter(Boolean).join(' ')}
+          "workspace-grid",
+          isConsultationStarter ? "consultation-starter-grid" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
       >
         <section
-          className={activeView === 'chat' ? 'single-module-panel chat-shell-panel' : 'single-module-panel'}
+          className={
+            activeView === "chat"
+              ? "single-module-panel chat-shell-panel"
+              : "single-module-panel"
+          }
           aria-label="当前接诊患者"
         >
-          {activeView === 'chat' ? (
-            <div className={isConsultationStarter ? 'consultation-workspace chat-route starter-route' : 'consultation-workspace chat-route'}>
+          {activeView === "chat" ? (
+            <div
+              className={
+                isConsultationStarter
+                  ? "consultation-workspace chat-route starter-route"
+                  : "consultation-workspace chat-route"
+              }
+            >
               {isDraftingConsultation || !activeConsultation ? (
                 <ConsultationStarter
                   archiveLabel={archiveLabel}
@@ -759,7 +880,9 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
                   draft={messageDraft}
                   archiveLabel={archiveLabel}
                   errorMessage={historyLoadError}
-                  isLoading={isConsultationLoading || isMessageLoading || isCompleting}
+                  isLoading={
+                    isConsultationLoading || isMessageLoading || isCompleting
+                  }
                   isSending={isSendingMessage}
                   isRunActionPending={isRunActionPending}
                   isRunBlocking={isRunBlocking}
@@ -775,13 +898,15 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
                   onDraftChange={setMessageDraft}
                   onOpenArchiveSheet={() => setIsArchiveSheetOpen(true)}
                   onRemoveTag={handleRemoveConsultationTag}
-                  onAddSuggestedTag={() => selectedPatient && setTaggedPatient(selectedPatient)}
+                  onAddSuggestedTag={() =>
+                    selectedPatient && setTaggedPatient(selectedPatient)
+                  }
                   onComplete={handleCompleteConsultation}
                   onCancel={handleCancelConsultation}
                   onCancelRun={handleCancelRun}
                   onRetryHistory={() => {
                     if (activeConsultation) {
-                      void loadMessages(activeConsultation.id)
+                      void loadMessages(activeConsultation.id);
                     }
                   }}
                   onResumeRun={handleResumeRun}
@@ -794,19 +919,19 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
             </div>
           ) : null}
 
-          {activeView === 'summary' ? (
+          {activeView === "summary" ? (
             <div className="consultation-workspace">
               <ConsultationSummaryPanel
                 consultation={activeConsultation}
                 isCompleting={isCompleting}
-                isLoading={isConsultationLoading || isMessageLoading || isSendingMessage}
+                isLoading={
+                  isConsultationLoading || isMessageLoading || isSendingMessage
+                }
                 onComplete={handleCompleteConsultation}
               />
             </div>
           ) : null}
-
         </section>
-
       </section>
       <ArchiveSheet
         isOpen={isArchiveSheetOpen}
@@ -819,7 +944,7 @@ export function PatientIntakeWorkspace({ view = 'chat' }: PatientIntakeWorkspace
         onAnswerWithoutArchive={answerWithoutArchive}
       />
     </section>
-  )
+  );
 }
 
 function ConsultationStarter({
@@ -832,25 +957,32 @@ function ConsultationStarter({
   onRemoveTag,
   onSubmit,
 }: {
-  archiveLabel: string
-  chiefComplaint: string
-  isCreating: boolean
-  taggedPatient: Patient | null
-  onChange: (value: string) => void
-  onOpenArchiveSheet: () => void
-  onRemoveTag: () => void
-  onSubmit: () => void
+  archiveLabel: string;
+  chiefComplaint: string;
+  isCreating: boolean;
+  taggedPatient: Patient | null;
+  onChange: (value: string) => void;
+  onOpenArchiveSheet: () => void;
+  onRemoveTag: () => void;
+  onSubmit: () => void;
 }) {
-  const chiefComplaintRef = useRef<HTMLTextAreaElement>(null)
-  const submitLabel = isCreating ? '创建中...' : taggedPatient ? '开始问诊' : '发送消息'
+  const chiefComplaintRef = useRef<HTMLTextAreaElement>(null);
+  const submitLabel = isCreating
+    ? "创建中..."
+    : taggedPatient
+    ? "开始问诊"
+    : "发送消息";
 
   function selectSuggestion(prompt: string) {
-    onChange(prompt)
-    chiefComplaintRef.current?.focus()
+    onChange(prompt);
+    chiefComplaintRef.current?.focus();
   }
 
   return (
-    <section className="consultation-card consultation-starter-card" aria-label="新建对话">
+    <section
+      className="consultation-card consultation-starter-card"
+      aria-label="新建对话"
+    >
       <h2 className="visually-hidden">新建对话</h2>
       <div className="consultation-starter-welcome">
         <span className="consultation-starter-mark" aria-hidden="true">
@@ -879,12 +1011,12 @@ function ConsultationStarter({
       <form
         className="consultation-intake-card consultation-composer-shell"
         onSubmit={(event) => {
-          event.preventDefault()
-          onSubmit()
+          event.preventDefault();
+          onSubmit();
         }}
       >
         <label className="visually-hidden" htmlFor="chief-complaint">
-          {taggedPatient ? '患者主诉' : '消息'}
+          {taggedPatient ? "患者主诉" : "消息"}
         </label>
         <textarea
           ref={chiefComplaintRef}
@@ -892,12 +1024,14 @@ function ConsultationStarter({
           value={chiefComplaint}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey) {
-              event.preventDefault()
-              onSubmit()
+            if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
+              onSubmit();
             }
           }}
-          placeholder={taggedPatient ? '描述患者当前症状或主诉' : '输入你想咨询的问题'}
+          placeholder={
+            taggedPatient ? "描述患者当前症状或主诉" : "输入你想咨询的问题"
+          }
           rows={4}
         />
         <div className="starter-composer-actions consultation-composer-actions">
@@ -911,15 +1045,28 @@ function ConsultationStarter({
                   title="点击切换患者"
                   onClick={onOpenArchiveSheet}
                 >
-                  <MaterialIcon name="medicalServices" />问诊·{taggedPatient.name}
+                  <MaterialIcon name="medicalServices" />
+                  问诊·{taggedPatient.name}
                 </button>
-                <button type="button" className="consultation-tag-remove-button" aria-label="删除本地问诊标签" onClick={onRemoveTag}>
+                <button
+                  type="button"
+                  className="consultation-tag-remove-button"
+                  aria-label="删除本地问诊标签"
+                  onClick={onRemoveTag}
+                >
                   <MaterialIcon name="close" />
                 </button>
               </span>
             ) : (
-              <button type="button" className="archive-consult-chip" aria-label="添加问诊标签" title={archiveLabel} onClick={onOpenArchiveSheet}>
-                <MaterialIcon name="add" />问诊
+              <button
+                type="button"
+                className="archive-consult-chip"
+                aria-label="添加问诊标签"
+                title={archiveLabel}
+                onClick={onOpenArchiveSheet}
+              >
+                <MaterialIcon name="add" />
+                问诊
               </button>
             )}
           </div>
@@ -935,62 +1082,62 @@ function ConsultationStarter({
         </div>
       </form>
     </section>
-  )
+  );
 }
 
 const CONSULTATION_STARTER_SUGGESTIONS = [
   {
-    icon: 'medicalServices',
-    title: '描述当前症状',
-    description: '症状线索与持续时间',
-    prompt: '我想描述最近出现的症状，请帮我梳理可能的原因和还需要补充的信息。',
+    icon: "medicalServices",
+    title: "描述当前症状",
+    description: "症状线索与持续时间",
+    prompt: "我想描述最近出现的症状，请帮我梳理可能的原因和还需要补充的信息。",
   },
   {
-    icon: 'history',
-    title: '梳理既往情况',
-    description: '病史、用药与生活习惯',
-    prompt: '我想梳理既往病史、近期用药和生活习惯，请引导我逐项补充。',
+    icon: "history",
+    title: "梳理既往情况",
+    description: "病史、用药与生活习惯",
+    prompt: "我想梳理既往病史、近期用药和生活习惯，请引导我逐项补充。",
   },
   {
-    icon: 'factCheck',
-    title: '解读检查报告',
-    description: '理解指标与注意事项',
-    prompt: '我想了解一份检查报告，请告诉我需要提供哪些指标和背景信息。',
+    icon: "factCheck",
+    title: "解读检查报告",
+    description: "理解指标与注意事项",
+    prompt: "我想了解一份检查报告，请告诉我需要提供哪些指标和背景信息。",
   },
   {
-    icon: 'chat',
-    title: '开始中医问诊',
-    description: '按中医问诊思路逐步了解',
-    prompt: '请按中医问诊思路逐步询问我的主要不适，并帮我整理症状线索。',
+    icon: "chat",
+    title: "开始中医问诊",
+    description: "按中医问诊思路逐步了解",
+    prompt: "请按中医问诊思路逐步询问我的主要不适，并帮我整理症状线索。",
   },
-] as const
+] as const;
 
 function mergeConsultationContext(
   consultation: Consultation,
   context: ConsultationContext,
-  patient: Patient | null,
+  patient: Patient | null
 ): Consultation {
-  const shouldBindPatient = consultation.patientId === null && patient !== null
+  const shouldBindPatient = consultation.patientId === null && patient !== null;
   return {
     ...consultation,
     patientId: shouldBindPatient ? patient.id : consultation.patientId,
     patientName: shouldBindPatient ? patient.name : consultation.patientName,
     consultationContext: context,
     statusName: consultationStatusLabel(context.status),
-  }
+  };
 }
 
 function formatNow() {
-  return new Date().toLocaleString('zh-CN', { hour12: false })
+  return new Date().toLocaleString("zh-CN", { hour12: false });
 }
 
 function readPositiveId(value: string | undefined) {
-  const parsed = Number(value)
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
 function readHistoryLoadError(error: unknown) {
-  if (!(error instanceof Error)) return HISTORY_LOAD_ERROR
-  const message = error.message.trim()
-  return message && !message.endsWith(': null') ? message : HISTORY_LOAD_ERROR
+  if (!(error instanceof Error)) return HISTORY_LOAD_ERROR;
+  const message = error.message.trim();
+  return message && !message.endsWith(": null") ? message : HISTORY_LOAD_ERROR;
 }

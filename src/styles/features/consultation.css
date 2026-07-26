@@ -41,8 +41,19 @@
 .consultation-chat-panel > .consultation-panel-header {
   width: 100%;
   min-width: 0;
-  min-height: 56px;
-  padding: 0 4px;
+  min-height: 48px;
+  position: relative;
+  padding: 0 20px;
+}
+
+.consultation-chat-panel > .consultation-panel-header::after {
+  content: "";
+  position: absolute;
+  right: calc(var(--dashboard-main-inline-padding, 20px) * -1);
+  bottom: 0;
+  left: calc(var(--dashboard-main-inline-padding, 20px) * -1);
+  height: 1px;
+  background: #edf0f2;
 }
 
 .consultation-chat-panel > .consultation-chat-body {
@@ -140,7 +151,8 @@
   background: #ffffff;
   box-shadow: 0 2px 5px rgba(15, 23, 42, 0.05);
   text-align: left;
-  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  transition: border-color 160ms ease, box-shadow 160ms ease,
+    transform 160ms ease;
 }
 
 .consultation-suggestion-card:hover {
@@ -155,9 +167,15 @@
   color: #5b8def;
 }
 
-.consultation-suggestion-card:nth-child(2) .material-icon { color: #8b5cf6; }
-.consultation-suggestion-card:nth-child(3) .material-icon { color: #18a957; }
-.consultation-suggestion-card:nth-child(4) .material-icon { color: #ef6c35; }
+.consultation-suggestion-card:nth-child(2) .material-icon {
+  color: #8b5cf6;
+}
+.consultation-suggestion-card:nth-child(3) .material-icon {
+  color: #18a957;
+}
+.consultation-suggestion-card:nth-child(4) .material-icon {
+  color: #ef6c35;
+}
 
 .consultation-suggestion-card > span {
   min-width: 0;
@@ -337,10 +355,7 @@
 }
 
 .consultation-chat-stream > .message-bubble.user {
-  margin-right: max(
-    12px,
-    calc((100% - var(--consultation-reading-width)) / 2)
-  );
+  margin-right: max(12px, calc((100% - var(--consultation-reading-width)) / 2));
 }
 
 .consultation-chat-stream:empty {
@@ -422,7 +437,8 @@
   padding: 1px 5px;
   color: var(--app-indigo);
   background: var(--app-indigo-soft);
-  font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono",
+    monospace;
   font-size: 0.92em;
 }
 
@@ -727,13 +743,15 @@
   border: 1px solid #e1e3e6;
   border-radius: 20px;
   background: #ffffff;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.10), 0 2px 7px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.1),
+    0 2px 7px rgba(15, 23, 42, 0.06);
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .consultation-composer-shell:focus-within {
   border-color: #c9cdd2;
-  box-shadow: 0 12px 34px rgba(15, 23, 42, 0.12), 0 0 0 3px rgba(17, 24, 39, 0.05);
+  box-shadow: 0 12px 34px rgba(15, 23, 42, 0.12),
+    0 0 0 3px rgba(17, 24, 39, 0.05);
 }
 
 .consultation-composer-shell > textarea {
@@ -852,7 +870,8 @@
   background: #f3f4f6;
 }
 
-.consultation-composer-files.is-compact .consultation-upload-button:not(:disabled):hover {
+.consultation-composer-files.is-compact
+  .consultation-upload-button:not(:disabled):hover {
   color: #111827;
   background: #e8eaed;
 }
@@ -1155,18 +1174,41 @@
 }
 
 .consultation-tag-suggestion button,
-.consultation-control-row button { border: 0; border-radius: 0.55rem; padding: 0.45rem 0.7rem; cursor: pointer; }
+.consultation-control-row button {
+  border: 0;
+  border-radius: 0.55rem;
+  padding: 0.45rem 0.7rem;
+  cursor: pointer;
+}
 .consultation-control-row button {
   font: inherit;
   font-size: var(--font-size-body);
   font-weight: var(--font-weight-semibold);
   line-height: 18px;
 }
-.consultation-tag-chip { display: inline-flex; align-items: center; gap: 0.35rem; }
-.consultation-tag-chip > button { border: 0; background: transparent; cursor: pointer; line-height: 1; }
-.consultation-tag-chip > button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
-.consultation-control-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-.consultation-control-row button:last-child { color: #9b342d; }
+.consultation-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.consultation-tag-chip > button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  line-height: 1;
+}
+.consultation-tag-chip > button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.consultation-control-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.consultation-control-row button:last-child {
+  color: #9b342d;
+}
 
 .run-governance-status {
   display: flex;
@@ -1199,9 +1241,21 @@
   opacity: 0.72;
 }
 
-.run-governance-interrupted { border-color: #e6c875; background: #fff9e8; color: #765a14; }
-.run-governance-error { border-color: #e7b8b3; background: #fff4f2; color: #903c34; }
-.run-governance-cancelling { border-color: #d7d9dc; background: #f5f6f7; color: #5d6662; }
+.run-governance-interrupted {
+  border-color: #e6c875;
+  background: #fff9e8;
+  color: #765a14;
+}
+.run-governance-error {
+  border-color: #e7b8b3;
+  background: #fff4f2;
+  color: #903c34;
+}
+.run-governance-cancelling {
+  border-color: #d7d9dc;
+  background: #f5f6f7;
+  color: #5d6662;
+}
 
 .run-governance-actions {
   justify-content: flex-end;
@@ -1224,7 +1278,10 @@
   background: var(--app-accent);
 }
 
-.run-governance-actions button:disabled { cursor: wait; opacity: 0.55; }
+.run-governance-actions button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
 
 .consultation-composer-files {
   grid-column: 1 / -1;
@@ -1315,8 +1372,14 @@
   line-height: 1;
 }
 
-.consultation-file-input { display: none; }
-.consultation-files-error { margin: 0; color: #9b342d; font-size: var(--font-size-caption); }
+.consultation-file-input {
+  display: none;
+}
+.consultation-files-error {
+  margin: 0;
+  color: #9b342d;
+  font-size: var(--font-size-caption);
+}
 
 .consultation-message-artifacts {
   display: grid;
@@ -1353,7 +1416,9 @@
   font-weight: var(--font-weight-bold);
 }
 
-.consultation-message-artifacts button:not(:disabled):hover { background: var(--app-accent-soft); }
+.consultation-message-artifacts button:not(:disabled):hover {
+  background: var(--app-accent-soft);
+}
 
 .message-send-button.is-stop {
   border: 1px solid var(--app-border);
@@ -1371,13 +1436,27 @@
 
 @media (max-width: 640px) {
   .consultation-tag-suggestion,
-  .run-governance-status { align-items: flex-start; flex-direction: column; }
-  .consultation-upload-chip { max-width: 220px; }
-  .consultation-chat-stream { gap: 20px; padding: 10px 2px 20px; }
-  .message-bubble.user { max-width: 88%; }
-  .message-bubble.assistant { padding-inline: 0; }
+  .run-governance-status {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .consultation-upload-chip {
+    max-width: 220px;
+  }
+  .consultation-chat-stream {
+    gap: 20px;
+    padding: 10px 2px 20px;
+  }
+  .message-bubble.user {
+    max-width: 88%;
+  }
+  .message-bubble.assistant {
+    padding-inline: 0;
+  }
   .message-bubble,
-  .assistant-markdown { font-size: var(--font-size-body); }
+  .assistant-markdown {
+    font-size: var(--font-size-body);
+  }
 }
 
 .consultation-tag-chip.is-switchable {

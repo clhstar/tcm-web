@@ -12,7 +12,8 @@
   }
 
   .dashboard-main {
-    padding: 16px 16px 86px;
+    --dashboard-main-inline-padding: 16px;
+    padding: 0 0 86px;
   }
 
   .workspace-grid.with-context {
@@ -83,7 +84,7 @@
 
   .dashboard-topbar {
     display: grid;
-    padding-right: 0;
+    padding: 16px var(--dashboard-main-inline-padding);
   }
 
   .topbar-actions {
@@ -170,7 +171,7 @@
 
 @media (max-width: 560px) {
   .dashboard-main {
-    padding-inline: 16px;
+    padding-inline: 0;
   }
 
   .patient-context-panel {
