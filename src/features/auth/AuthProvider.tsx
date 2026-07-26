@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { authPayloadSchema, refreshSession, type AuthPayload } from '../../api/auth'
 import {
@@ -26,14 +26,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const [session, setSession] = useState<AuthPayload | null>(null)
   const [isInitializing, setIsInitializing] = useState(true)
+  const isLoggedOutRef = useRef(true)
 
   const authenticate = useCallback(async (nextSession: AuthPayload) => {
     await storeSession(nextSession.token, nextSession)
+    isLoggedOutRef.current = false
     setSession(nextSession)
     setIsInitializing(false)
   }, [])
 
   const logout = useCallback(async () => {
+    if (isLoggedOutRef.current) return
+    isLoggedOutRef.current = true
     await clearStoredSession()
     queryClient.clear()
     setSession(null)
@@ -67,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (cancelled) return
 
         if (!initialAuth.shouldRefresh) {
+          isLoggedOutRef.current = initialAuth.session === null
           setSession(initialAuth.session)
           setIsInitializing(false)
           return
@@ -76,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const nextSession = await refreshSession()
           await storeSession(nextSession.token, nextSession)
           if (!cancelled) {
+            isLoggedOutRef.current = false
             setSession(nextSession)
             setIsInitializing(false)
           }
@@ -83,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (isRefreshRejected(error)) {
             await clearStoredSession()
             if (!cancelled) {
+              isLoggedOutRef.current = true
               queryClient.clear()
               setSession(null)
               setIsInitializing(false)
@@ -92,12 +99,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           // A temporary network/server failure must not turn into an apparent logout.
           if (!cancelled) {
+            isLoggedOutRef.current = false
             setSession(initialAuth.session)
             setIsInitializing(false)
           }
         }
       } catch {
         if (!cancelled) {
+          isLoggedOutRef.current = true
           setSession(null)
           setIsInitializing(false)
         }

@@ -66,7 +66,7 @@ export async function fetchApiResponse(
     if (refreshResult === 'refreshed') {
       response = await performFetch(path, init, options, authenticated)
     }
-    if (refreshResult === 'expired' || (refreshResult === 'refreshed' && response.status === 401)) {
+    if (refreshResult !== 'refreshed' || response.status === 401) {
       window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT))
     }
   }

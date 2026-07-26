@@ -114,6 +114,7 @@ type FetchRouterOptions = {
   conversationPage?: ConversationPageResponse
   failConversationId?: number
   refreshStatus?: number
+  unauthorizedMessagesForId?: number
 }
 
 function jsonResponse(payload: unknown, status = 200) {
@@ -223,6 +224,9 @@ function installFetchRouter(options: FetchRouterOptions = {}) {
     }
     const messageMatch = url.pathname.match(/^\/api\/conversations\/(\d+)\/messages$/)
     if (method === 'GET' && messageMatch) {
+      if (Number(messageMatch[1]) === options.unauthorizedMessagesForId) {
+        return jsonResponse({ code: 401, message: 'Unauthorized', data: null }, 401)
+      }
       return jsonResponse({ code: 200, message: 'success', data: [] })
     }
     const completeMatch = url.pathname.match(/^\/api\/conversations\/(\d+)\/consultation\/complete$/)
@@ -476,6 +480,31 @@ describe('App routes and consultation entry', () => {
     expect(await screen.findByRole('heading', { name: '新建对话' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '欢迎回来' })).not.toBeInTheDocument()
     expect(desktopAuth.clearSession).not.toHaveBeenCalled()
+  })
+
+  it('returns to login when an authenticated conversation request receives 401', async () => {
+    const conversationPage: ConversationPageResponse = {
+      ...emptyConversationPageResponse,
+      data: {
+        ...emptyConversationPageResponse.data,
+        total: 1,
+        records: [activeConversation],
+      },
+    }
+    const desktopAuth = installDesktopAuth(authResponse.data)
+    installFetchRouter({
+      conversationPage,
+      refreshStatus: 401,
+      unauthorizedMessagesForId: activeConversation.id,
+    })
+    window.history.replaceState({}, '', `/consultation/${activeConversation.id}`)
+
+    render(<App />)
+
+    expect(await screen.findByRole('heading', { name: '欢迎回来' })).toBeInTheDocument()
+    expect(desktopAuth.clearSession).toHaveBeenCalledOnce()
+    expect(localStorage.getItem('tcm_access_token')).toBeNull()
+    expect(window.location.pathname).toBe('/login')
   })
 
   it('requires login after the persisted refresh token expires', async () => {
