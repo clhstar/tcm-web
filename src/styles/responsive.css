@@ -68,7 +68,7 @@
   }
 
   .auth-intro h1 {
-    font-size: var(--font-size-display);
+    font-size: clamp(34px, 10vw, 44px);
   }
 
   .auth-intro p {
