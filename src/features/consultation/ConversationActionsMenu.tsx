@@ -219,7 +219,7 @@ export function ConversationActions({
               onClose={() => setIsDeleteOpen(false)}
             >
               <div className="conversation-action-form">
-                <p>删除后，这条对话将从对话记录中移除。</p>
+                <p>这条对话将从对话记录中移除</p>
                 {errorMessage ? <p role="alert">{errorMessage}</p> : null}
                 <div className="conversation-action-dialog-actions">
                   <button

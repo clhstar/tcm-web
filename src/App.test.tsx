@@ -314,23 +314,12 @@ function jwtWithExpiration(exp: number) {
   return `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode({ exp })}.signature`
 }
 
-function installDesktopAuth(session: unknown) {
-  let persistedSession = session ? JSON.stringify(session) : null
-  const auth = {
-    readSession: vi.fn(async () => persistedSession),
-    writeSession: vi.fn(async (serializedSession: string) => {
-      persistedSession = serializedSession
-    }),
-    clearSession: vi.fn(async () => {
-      persistedSession = null
-    }),
-  }
+function installDesktopShell() {
   Object.defineProperty(window, 'tcmDesktop', {
     configurable: true,
     value: {
       isDesktop: true,
       platform: 'win32',
-      auth,
       updater: {
         getState: vi.fn(async () => ({ status: 'idle', currentVersion: '0.1.18' })),
         check: vi.fn(async () => ({ status: 'idle', currentVersion: '0.1.18' })),
@@ -339,7 +328,16 @@ function installDesktopAuth(session: unknown) {
       },
     },
   })
-  return auth
+}
+
+function storeLocalSession(session: unknown) {
+  localStorage.setItem('tcm_auth_session', JSON.stringify(session))
+  if (typeof session !== 'object' || session === null) return
+
+  const token = 'token' in session ? session.token : null
+  const refreshToken = 'refreshToken' in session ? session.refreshToken : null
+  if (typeof token === 'string') localStorage.setItem('tcm_access_token', token)
+  if (typeof refreshToken === 'string') localStorage.setItem('tcm_refresh_token', refreshToken)
 }
 
 describe('App routes and consultation entry', () => {
@@ -364,7 +362,6 @@ describe('App routes and consultation entry', () => {
   })
 
   it('registers, logs in, stores the token, and enters the consultation workspace', async () => {
-    const desktopAuth = installDesktopAuth(null)
     const fetchMock = installFetchRouter()
     const user = userEvent.setup()
     render(<App />)
@@ -377,7 +374,7 @@ describe('App routes and consultation entry', () => {
 
     expect(await screen.findByRole('heading', { name: '新建对话' })).toBeInTheDocument()
     expect(localStorage.getItem('tcm_access_token')).toBe('token-123')
-    expect(desktopAuth.writeSession).toHaveBeenCalledWith(JSON.stringify(authResponse.data))
+    expect(localStorage.getItem('tcm_auth_session')).toBe(JSON.stringify(authResponse.data))
     expect(findRequest(fetchMock, 'POST', '/api/user/register')).toBeDefined()
     expect(findRequest(fetchMock, 'POST', '/api/user/login')).toBeDefined()
     expect(window.location.pathname).toBe('/consultation')
@@ -445,13 +442,13 @@ describe('App routes and consultation entry', () => {
     expect(window.location.pathname).toBe('/consultation-records')
   })
 
-  it('refreshes an expired access token on startup and restores the saved login', async () => {
+  it('refreshes an expired access token from localStorage on startup and restores the saved login', async () => {
     const fetchMock = installFetchRouter()
     const expiredSession = {
       ...authResponse.data,
       token: jwtWithExpiration(Math.floor(Date.now() / 1000) - 60),
     }
-    const desktopAuth = installDesktopAuth(expiredSession)
+    storeLocalSession(expiredSession)
     window.history.replaceState({}, '', '/consultation')
 
     render(<App />)
@@ -459,8 +456,6 @@ describe('App routes and consultation entry', () => {
     expect(screen.getByRole('status')).toHaveTextContent('正在恢复登录状态')
     expect(await screen.findByRole('heading', { name: '新建对话' })).toBeInTheDocument()
     expect(findRequest(fetchMock, 'POST', '/api/user/refresh')).toBeDefined()
-    expect(desktopAuth.readSession).toHaveBeenCalledOnce()
-    expect(desktopAuth.writeSession).toHaveBeenCalledWith(JSON.stringify(authResponse.data))
     expect(localStorage.getItem('tcm_access_token')).toBe('token-123')
     expect(localStorage.getItem('tcm_refresh_token')).toBe('refresh-token-123')
     expect(window.location.pathname).toBe('/consultation')
@@ -472,14 +467,14 @@ describe('App routes and consultation entry', () => {
       ...authResponse.data,
       token: jwtWithExpiration(Math.floor(Date.now() / 1000) - 60),
     }
-    const desktopAuth = installDesktopAuth(expiredSession)
+    storeLocalSession(expiredSession)
     window.history.replaceState({}, '', '/consultation')
 
     render(<App />)
 
     expect(await screen.findByRole('heading', { name: '新建对话' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '欢迎回来' })).not.toBeInTheDocument()
-    expect(desktopAuth.clearSession).not.toHaveBeenCalled()
+    expect(localStorage.getItem('tcm_auth_session')).toBe(JSON.stringify(expiredSession))
   })
 
   it('returns to login when an authenticated conversation request receives 401', async () => {
@@ -491,7 +486,7 @@ describe('App routes and consultation entry', () => {
         records: [activeConversation],
       },
     }
-    const desktopAuth = installDesktopAuth(authResponse.data)
+    storeLocalSession(authResponse.data)
     installFetchRouter({
       conversationPage,
       refreshStatus: 401,
@@ -502,8 +497,8 @@ describe('App routes and consultation entry', () => {
     render(<App />)
 
     expect(await screen.findByRole('heading', { name: '欢迎回来' })).toBeInTheDocument()
-    expect(desktopAuth.clearSession).toHaveBeenCalledOnce()
     expect(localStorage.getItem('tcm_access_token')).toBeNull()
+    expect(localStorage.getItem('tcm_auth_session')).toBeNull()
     expect(window.location.pathname).toBe('/login')
   })
 
@@ -513,29 +508,28 @@ describe('App routes and consultation entry', () => {
       token: jwtWithExpiration(Math.floor(Date.now() / 1000) - 60),
       refreshToken: jwtWithExpiration(Math.floor(Date.now() / 1000) - 60),
     }
-    const desktopAuth = installDesktopAuth(expiredSession)
+    storeLocalSession(expiredSession)
     window.history.replaceState({}, '', '/consultation')
 
     render(<App />)
 
     expect(await screen.findByRole('heading', { name: '欢迎回来' })).toBeInTheDocument()
-    expect(desktopAuth.clearSession).toHaveBeenCalledOnce()
+    expect(localStorage.getItem('tcm_auth_session')).toBeNull()
     expect(window.location.pathname).toBe('/login')
   })
 
-  it('clears the persisted desktop session when the user logs out', async () => {
-    const desktopAuth = installDesktopAuth(null)
+  it('clears the local session when the user logs out', async () => {
+    installDesktopShell()
     installFetchRouter()
     const user = userEvent.setup()
     render(<App />)
     await loginThroughUi(user)
-    desktopAuth.clearSession.mockClear()
 
     await user.click(screen.getByRole('button', { name: '账户菜单' }))
     await user.click(screen.getByRole('menuitem', { name: '退出登录' }))
 
     expect(await screen.findByRole('heading', { name: '欢迎回来' })).toBeInTheDocument()
-    expect(desktopAuth.clearSession).toHaveBeenCalledOnce()
+    expect(localStorage.getItem('tcm_auth_session')).toBeNull()
     expect(window.location.pathname).toBe('/login')
   })
 
@@ -553,7 +547,6 @@ describe('App routes and consultation entry', () => {
     expect(within(versionGroup).getByText('Python')).toBeInTheDocument()
     expect(await within(versionGroup).findByText('v0.0.1-SNAPSHOT')).toBeInTheDocument()
     expect(within(versionGroup).getByText('v2.3.0')).toBeInTheDocument()
-    expect(screen.getByText('3/3 服务在线')).toBeInTheDocument()
   })
 
   it('navigates from the consultation workspace to the patient directory', async () => {

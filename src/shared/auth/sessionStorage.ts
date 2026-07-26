@@ -16,31 +16,7 @@ export function readStoredSession(): unknown {
 }
 
 export async function readPersistedSession(): Promise<unknown> {
-  const desktopAuth = window.tcmDesktop?.auth
-  if (!desktopAuth) return readStoredSession()
-
-  let persistedValue: string | null
-  try {
-    persistedValue = await desktopAuth.readSession()
-  } catch {
-    return readStoredSession()
-  }
-  if (persistedValue) {
-    const session = parseStoredSession(persistedValue)
-    if (session) hydrateLocalSession(persistedValue, session)
-    return session
-  }
-
-  const localValue = localStorage.getItem(SESSION_STORAGE_KEY)
-  const localSession = parseStoredSession(localValue)
-  if (localValue && localSession) {
-    try {
-      await desktopAuth.writeSession(localValue)
-    } catch {
-      // Keep the current renderer session usable even if desktop persistence is temporarily unavailable.
-    }
-  }
-  return localSession
+  return readStoredSession()
 }
 
 function parseStoredSession(value: string | null): unknown {
@@ -54,29 +30,16 @@ function parseStoredSession(value: string | null): unknown {
 
 export async function storeSession(token: string, session: unknown) {
   const serializedSession = JSON.stringify(session)
-  const previousAccessToken = localStorage.getItem(TOKEN_STORAGE_KEY)
-  const previousRefreshToken = localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY)
-  const previousSession = localStorage.getItem(SESSION_STORAGE_KEY)
   localStorage.setItem(TOKEN_STORAGE_KEY, token)
   const refreshToken = readRefreshTokenFromSession(session)
   if (refreshToken) {
     localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, refreshToken)
   }
   localStorage.setItem(SESSION_STORAGE_KEY, serializedSession)
-
-  try {
-    await window.tcmDesktop?.auth.writeSession(serializedSession)
-  } catch (error) {
-    restoreLocalValue(TOKEN_STORAGE_KEY, previousAccessToken)
-    restoreLocalValue(REFRESH_TOKEN_STORAGE_KEY, previousRefreshToken)
-    restoreLocalValue(SESSION_STORAGE_KEY, previousSession)
-    throw error
-  }
 }
 
 export async function clearStoredSession() {
   clearLocalSession()
-  await window.tcmDesktop?.auth.clearSession()
 }
 
 function clearLocalSession() {
@@ -111,28 +74,4 @@ function readRefreshTokenFromSession(session: unknown) {
   }
   const refreshToken = session.refreshToken
   return typeof refreshToken === 'string' && refreshToken ? refreshToken : null
-}
-
-function hydrateLocalSession(serializedSession: string, session: unknown) {
-  if (typeof session !== 'object' || session === null) return
-
-  const accessToken = 'token' in session ? session.token : null
-  const refreshToken = 'refreshToken' in session ? session.refreshToken : null
-  if (typeof accessToken === 'string' && accessToken) {
-    localStorage.setItem(TOKEN_STORAGE_KEY, accessToken)
-  }
-  if (typeof refreshToken === 'string' && refreshToken) {
-    localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, refreshToken)
-  } else {
-    localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY)
-  }
-  localStorage.setItem(SESSION_STORAGE_KEY, serializedSession)
-}
-
-function restoreLocalValue(key: string, value: string | null) {
-  if (value === null) {
-    localStorage.removeItem(key)
-  } else {
-    localStorage.setItem(key, value)
-  }
 }

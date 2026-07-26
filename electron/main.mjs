@@ -3,7 +3,7 @@ import { createServer } from 'node:http'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { app, BrowserWindow, ipcMain, safeStorage, session, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, session, shell } from 'electron'
 import electronUpdater from 'electron-updater'
 
 const { autoUpdater } = electronUpdater
@@ -11,9 +11,8 @@ const { autoUpdater } = electronUpdater
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url))
 const rendererDirectory = path.resolve(currentDirectory, '..', 'dist')
 const developmentUrl = process.env.TCM_WEB_DEV_SERVER_URL ?? 'http://127.0.0.1:5173'
+const packagedRendererPort = Number.parseInt(process.env.TCM_WEB_RENDERER_PORT ?? '41730', 10)
 const updateCheckInterval = 5 * 60 * 1000
-const authSessionFileName = 'auth-session.json'
-const maxAuthSessionBytes = 128 * 1024
 
 let updaterState = {
   status: app.isPackaged ? 'idle' : 'unsupported',
@@ -93,7 +92,7 @@ async function startRendererServer() {
 
   await new Promise((resolve, reject) => {
     server.once('error', reject)
-    server.listen(0, '127.0.0.1', resolve)
+    server.listen(packagedRendererPort, '127.0.0.1', resolve)
   })
 
   const address = server.address()
@@ -166,53 +165,6 @@ function publishUpdaterState(patch) {
 function updaterErrorMessage(error) {
   const message = error instanceof Error ? error.message : String(error)
   return message.replace(/(github_pat_|ghp_)[A-Za-z0-9_]+/g, '[redacted]')
-}
-
-function authSessionFilePath() {
-  return path.join(app.getPath('userData'), authSessionFileName)
-}
-
-async function readPersistedAuthSession() {
-  try {
-    const envelope = JSON.parse(await fs.readFile(authSessionFilePath(), 'utf8'))
-    if (envelope?.version !== 1 || typeof envelope.value !== 'string') return null
-    if (!envelope.encrypted) return envelope.value
-    if (!safeStorage.isEncryptionAvailable()) return null
-    return safeStorage.decryptString(Buffer.from(envelope.value, 'base64'))
-  } catch (error) {
-    if (error?.code !== 'ENOENT') {
-      console.warn('Unable to read the persisted authentication session')
-    }
-    return null
-  }
-}
-
-async function writePersistedAuthSession(serializedSession) {
-  if (typeof serializedSession !== 'string' || Buffer.byteLength(serializedSession) > maxAuthSessionBytes) {
-    throw new TypeError('Invalid authentication session')
-  }
-
-  const encrypted = safeStorage.isEncryptionAvailable()
-  const value = encrypted
-    ? safeStorage.encryptString(serializedSession).toString('base64')
-    : serializedSession
-  await fs.mkdir(path.dirname(authSessionFilePath()), { recursive: true })
-  await fs.writeFile(
-    authSessionFilePath(),
-    `${JSON.stringify({ version: 1, encrypted, value })}\n`,
-    { encoding: 'utf8', mode: 0o600 },
-  )
-}
-
-async function clearPersistedAuthSession() {
-  await fs.rm(authSessionFilePath(), { force: true })
-}
-
-function configureDesktopAuthPersistence() {
-  ipcMain.handle('desktop-auth:read-session', () => readPersistedAuthSession())
-  ipcMain.handle('desktop-auth:write-session', (_event, serializedSession) =>
-    writePersistedAuthSession(serializedSession))
-  ipcMain.handle('desktop-auth:clear-session', () => clearPersistedAuthSession())
 }
 
 function configureDesktopUpdater() {
@@ -292,7 +244,6 @@ async function checkForDesktopUpdate() {
 let rendererServer
 
 configureDesktopUpdater()
-configureDesktopAuthPersistence()
 
 app.whenReady().then(async () => {
   session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false))
