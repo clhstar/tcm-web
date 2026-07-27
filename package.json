@@ -2,8 +2,8 @@
   "name": "tcm-web",
   "private": true,
   "version": "0.1.28",
-  "description": "TCM consultation web and desktop client",
-  "author": "TCM Consultation Team",
+  "description": "AI中医 web and desktop client",
+  "author": "AI中医 Team",
   "type": "module",
   "main": "electron/main.mjs",
   "packageManager": "pnpm@10.33.0",
@@ -60,7 +60,7 @@
   },
   "build": {
     "appId": "com.tcm.consultation.desktop",
-    "productName": "TCM Consultation",
+    "productName": "AI中医",
     "asar": true,
     "directories": {
       "output": "release"
@@ -76,7 +76,7 @@
       "repo": "tcm-web",
       "releaseType": "release"
     },
-    "artifactName": "TCM-Consultation-${version}-${os}-${arch}.${ext}",
+    "artifactName": "TCM-${version}-${os}-${arch}.${ext}",
     "mac": {
       "category": "public.app-category.medical",
       "target": [

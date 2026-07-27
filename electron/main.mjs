@@ -14,6 +14,8 @@ const developmentUrl = process.env.TCM_WEB_DEV_SERVER_URL ?? 'http://127.0.0.1:5
 const packagedRendererPort = Number.parseInt(process.env.TCM_WEB_RENDERER_PORT ?? '41730', 10)
 const updateCheckInterval = 5 * 60 * 1000
 
+app.setName('AI中医')
+
 let updaterState = {
   status: app.isPackaged ? 'idle' : 'unsupported',
   currentVersion: app.getVersion(),
@@ -123,7 +125,7 @@ async function createMainWindow(rendererUrl) {
     minWidth: 1024,
     minHeight: 700,
     show: false,
-    title: 'TCM Consultation',
+    title: 'AI中医',
     autoHideMenuBar: process.platform !== 'darwin',
     backgroundColor: '#f7f5f0',
     webPreferences: {

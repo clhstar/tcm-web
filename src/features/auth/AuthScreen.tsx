@@ -70,7 +70,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
     <main className="auth-page">
       <section className="auth-intro" aria-labelledby="product-title">
         <div>
-          <h1 id="product-title">中医问诊系统</h1>
+          <h1 id="product-title">AI中医</h1>
           <p>
             为医生提供患者档案、智能问诊、多智能体协作过程与结构化归档的一体化工作台。
           </p>

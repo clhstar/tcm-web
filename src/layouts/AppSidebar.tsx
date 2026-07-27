@@ -99,7 +99,7 @@ export function AppSidebar({
     >
       <div className="dashboard-brand">
         <div>
-          <strong>中医问诊</strong>
+          <strong>AI中医</strong>
         </div>
         <button
           type="button"

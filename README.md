@@ -1,4 +1,4 @@
-# TCM Consultation Web/Desktop
+# AI中医 Web/Desktop
 
 React 19 + Vite 8 前端，同时提供浏览器版本和 Electron 桌面版本。桌面端复用同一套 React UI，并通过仅监听 `127.0.0.1` 的本地静态服务器加载页面，使现有后端 CORS 规则继续适用。
 
