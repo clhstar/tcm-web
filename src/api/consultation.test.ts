@@ -108,12 +108,8 @@ describe('consultation history API', () => {
         content: 'Please add the duration.',
         run_id: 'run-1',
         agent_trace: [
-          { agent: 'IntentAgent', primary_intent: 'symptom_consultation' },
-          {
-            agent: 'InquiryAgent',
-            information_sufficiency: 'insufficient',
-            should_pause_for_clarification: true,
-          },
+          { agent: 'CasePatchExtractor' },
+          { agent: 'CompletenessPolicy', action: 'clarify' },
         ],
       },
       {
@@ -254,6 +250,7 @@ describe('consultation file API', () => {
 
 describe('consultation stream API', () => {
   afterEach(() => {
+    vi.useRealTimers()
     localStorage.clear()
     vi.unstubAllGlobals()
   })
@@ -324,23 +321,18 @@ describe('consultation stream API', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
-  it('skips status recovery after a root updates public response and end', async () => {
+  it('skips status recovery after a root values public response and end', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
         sseResponse([
           { event: 'metadata', data: { run_id: 'run-1', thread_id: 'thread-101' } },
           {
-            event: 'updates',
+            event: 'values',
             data: {
-              namespace: [],
-              data: {
-                workflow_agent: {
-                  public_response: {
-                    status: 'need_clarification',
-                    assistant_message: 'How long has the headache lasted?',
-                  },
-                },
+              public_response: {
+                status: 'need_clarification',
+                assistant_message: 'How long has the headache lasted?',
               },
             },
           },
@@ -382,7 +374,7 @@ describe('consultation stream API', () => {
     [
       'non-root namespace',
       {
-        namespace: ['workflow_agent:child'],
+        namespace: ['tcm_agent:child'],
         data: {
           public_response: {
             status: 'completed',

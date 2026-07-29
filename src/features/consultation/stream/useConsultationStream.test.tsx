@@ -108,27 +108,18 @@ describe('useConsultationStream run recovery', () => {
       .fn()
       .mockResolvedValueOnce(
         sseResponse([
-          { event: 'metadata', data: { run_id: 'run-1', thread_id: 'thread-1', assistant_id: 'workflow_agent' } },
+          { event: 'metadata', data: { run_id: 'run-1', thread_id: 'thread-1', assistant_id: 'tcm_agent' } },
           {
-            event: 'updates',
+            event: 'values',
             data: {
-              workflow_agent: {
-                public_response: {
-                  status: 'completed',
-                  assistant_message: '你好呀！我是你的中医健康助手。',
-                },
+              public_response: {
+                status: 'completed',
+                assistant_message: '你好呀！我是你的中医健康助手。',
               },
             },
           },
+          { event: 'end', data: { status: 'done' } },
         ]),
-      )
-      .mockResolvedValueOnce(runStatus('success'))
-      .mockResolvedValueOnce(
-        jsonResponse({
-          code: 0,
-          message: 'success',
-          data: [{ role: 'assistant', content: '你好呀！我是你的中医健康助手。', run_id: 'run-1' }],
-        }),
       )
     vi.stubGlobal('fetch', fetchMock)
     const { result } = renderHook(() => useConsultationStream())

@@ -30,12 +30,9 @@ describe('restoreTcmFlowHistory', () => {
         content: '请补充持续时间。',
         run_id: 'run-1',
         agent_trace: [
-          { agent: 'IntentAgent', primary_intent: 'symptom_consultation' },
-          {
-            agent: 'InquiryAgent',
-            information_sufficiency: 'insufficient',
-            should_pause_for_clarification: true,
-          },
+          { agent: 'CasePatchExtractor' },
+          { agent: 'CaseMerger' },
+          { agent: 'CompletenessPolicy', action: 'clarify' },
         ],
       },
     ])
@@ -48,15 +45,11 @@ describe('restoreTcmFlowHistory', () => {
     const assistantId = restored.messages[1].id
     const collaboration = restored.collaborationByMessageId[assistantId]
     expect(collaboration.map((step) => step.agent)).toEqual([
-      'IntentAgent',
-      'InquiryAgent',
-      'EvidenceAgent',
-      'SyndromeAgent',
-      'AnswerAgent',
-      'SafetyAgent',
+      'CasePatchExtractor',
+      'CaseMerger',
+      'CompletenessPolicy',
     ])
-    expect(collaboration.find((step) => step.agent === 'IntentAgent')?.status).toBe('completed')
-    expect(collaboration.find((step) => step.agent === 'EvidenceAgent')?.status).toBe('skipped')
+    expect(collaboration.every((step) => step.status === 'completed')).toBe(true)
   })
 
   it('does not persist collaboration rows for an empty or invalid assistant trace', () => {

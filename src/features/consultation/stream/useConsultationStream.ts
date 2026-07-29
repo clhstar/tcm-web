@@ -15,7 +15,7 @@ import {
   type TcmFlowMessage,
 } from '../../../api/consultation'
 import { isRecord, readRootStreamPayload } from '../../../api/langGraphStream'
-import { readLeadToolEvents, readMessageDelta, readPublicResponse } from '../nativeStream'
+import { readPublicResponse } from '../nativeStream'
 import { restoreTcmFlowHistory } from '../tcmFlowHistory'
 import {
   consultationStreamReducer,
@@ -51,14 +51,10 @@ type MonitorRunOptions = {
 }
 
 type StreamContext = {
-  assistantId: string | null
-  failed: boolean
-  hasStreamedChunks: boolean
-  hasVisibleStreamedMessage: boolean
   hasPublicResponse: boolean
-  historyReconciled: boolean
 }
 
+/** 管理问诊 SSE、真实结束信号和持久运行恢复，不使用额外 stop grace 定时器。 */
 export function useConsultationStream() {
   const [state, dispatch] = useReducer(consultationStreamReducer, initialConsultationStreamState)
   const [runId, setRunId] = useState<string | null>(null)
@@ -270,12 +266,7 @@ export function useConsultationStream() {
     dispatch({ type: 'start', userMessage, assistantMessage, replaceMessages })
 
     const context: StreamContext = {
-      assistantId: null,
-      failed: false,
-      hasStreamedChunks: false,
-      hasVisibleStreamedMessage: false,
       hasPublicResponse: false,
-      historyReconciled: false,
     }
     const isCurrent = () =>
       sequence === sequenceRef.current && !abortController.signal.aborted
@@ -305,7 +296,7 @@ export function useConsultationStream() {
       if (result.runStatus) {
         const keepUiSettled = context.hasPublicResponse
         if (keepUiSettled) {
-          settleVisibleResponse(context, assistantMessage.id, dispatch)
+          settleVisibleResponse(dispatch)
         }
         void monitorRun(
           consultation.id,
@@ -318,25 +309,19 @@ export function useConsultationStream() {
       }
 
       if (
-        !context.hasPublicResponse &&
-        (!context.hasVisibleStreamedMessage || !result.transportEnded)
+        !context.hasPublicResponse
       ) {
         dispatch({ type: 'lifecycle', lifecycle: 'reconciling' })
         const historyMessages = await listConsultationMessages(consultation.id)
         if (!isCurrent()) return false
         const restored = restoreTcmFlowHistory(consultation.id, historyMessages)
-        context.historyReconciled = true
         dispatch({ type: 'restore', ...restored })
       }
 
-      settleVisibleResponse(context, assistantMessage.id, dispatch)
+      settleVisibleResponse(dispatch)
       return true
     } catch (error) {
       if (!isCurrent() || isAbortError(error)) return false
-      context.failed = true
-      if (context.assistantId === 'workflow_agent') {
-        dispatch({ type: 'settle-collaboration', messageId: assistantMessage.id, outcome: 'failed' })
-      }
       dispatch({ type: 'fail', messageId: assistantMessage.id, content: TCM_FLOW_FAILURE_MESSAGE })
       throw error
     } finally {
@@ -364,6 +349,7 @@ export function useConsultationStream() {
   }
 }
 
+/** 消费后端公开 SSE：只读取 public_response、病例上下文和运行元数据。 */
 function handleStreamEvent(
   event: TcmFlowSseEvent,
   assistantMessageId: number,
@@ -387,34 +373,10 @@ function handleStreamEvent(
     return
   }
   if (event.event === 'metadata') {
-    const metadata = extractStreamMetadata(event.data)
-    context.assistantId = metadata.assistantId ?? context.assistantId
-    if (metadata.runId) callbacks.onRunId?.(metadata.runId)
+    const observedRunId = extractRunId(event.data)
+    if (observedRunId) callbacks.onRunId?.(observedRunId)
     dispatch({ type: 'lifecycle', lifecycle: 'streaming' })
     return
-  }
-
-  if ((event.event === 'tasks' || event.event === 'updates') && context.assistantId === 'workflow_agent') {
-    dispatch({ type: 'collaboration-event', messageId: assistantMessageId, event })
-  }
-
-  if (event.event === 'messages') {
-    for (const toolEvent of readLeadToolEvents(event, context.assistantId)) {
-      dispatch({ type: 'upsert-tool', messageId: assistantMessageId, toolEvent })
-    }
-    const answerDelta = readMessageDelta(event, context.assistantId, {
-      hasStreamedChunks: context.hasStreamedChunks,
-    })
-    if (answerDelta) {
-      context.hasVisibleStreamedMessage = true
-      if (isMessageChunkEvent(event.data)) context.hasStreamedChunks = true
-      dispatch({
-        type: 'append-assistant',
-        messageId: assistantMessageId,
-        content: answerDelta,
-        pendingContent: TCM_FLOW_CONNECTING_MESSAGE,
-      })
-    }
   }
 
   const publicResponse = readPublicResponse(event)
@@ -426,31 +388,24 @@ function handleStreamEvent(
       content: publicResponse.assistantMessage,
     })
     if (publicResponse.suggestedAction === 'add_consultation_tag') callbacks.onSuggestedAction?.()
+    dispatch({ type: 'lifecycle', lifecycle: 'completed' })
   }
-  if (event.event === 'error') context.failed = true
 }
 
-function settleVisibleResponse(
-  context: StreamContext,
-  assistantMessageId: number,
-  dispatch: Dispatch<ConsultationStreamAction>,
-) {
-  if (!context.historyReconciled && context.assistantId === 'workflow_agent') {
-    dispatch({
-      type: 'settle-collaboration',
-      messageId: assistantMessageId,
-      outcome: context.failed ? 'failed' : 'completed',
-    })
-  }
+/** 收到公开回答后立即结束界面等待态，持久运行状态另行后台核对。 */
+function settleVisibleResponse(dispatch: Dispatch<ConsultationStreamAction>) {
+  /** 在公开响应或历史对账完成后立即结束 UI 等待态。 */
   dispatch({ type: 'lifecycle', lifecycle: 'completed' })
 }
 
+/** 从公开标题事件读取非空标题，非法载荷返回空值。 */
 export function parseConversationTitle(value: unknown): string | null {
   if (!isRecord(value) || typeof value.title !== 'string') return null
   const title = value.title.trim()
   return title || null
 }
 
+/** 校验并读取服务端病例投影 DTO，不接受任意内部状态。 */
 function parseConsultationContext(value: unknown): ConsultationContext | null {
   if (!isRecord(value)) return null
   const status = value.status
@@ -459,6 +414,7 @@ function parseConsultationContext(value: unknown): ConsultationContext | null {
   return { consultation_record_id: value.consultation_record_id, status, record_version: value.record_version, analysis_ready: value.analysis_ready }
 }
 
+/** 创建发送期间的本地消息占位，ID 仅用于当前界面归并。 */
 function createLocalMessage(
   consultationRecordId: number,
   role: 'USER' | 'ASSISTANT',
@@ -473,27 +429,27 @@ function createLocalMessage(
   }
 }
 
-function extractStreamMetadata(data: unknown): { assistantId: string | null; runId: string | null } {
+/** 只从公开 metadata 读取运行 ID；助手类型已固定为 tcm_agent。 */
+/** 从 metadata 事件提取非空运行 ID。 */
+function extractRunId(data: unknown): string | null {
   const root = readRootStreamPayload(data)
-  if (!isRecord(root)) return { assistantId: null, runId: null }
-  const assistantId = typeof root.assistant_id === 'string' ? root.assistant_id : null
-  const runId = typeof root.run_id === 'string' && root.run_id.trim() ? root.run_id.trim() : null
-  return { assistantId, runId }
+  if (!isRecord(root)) return null
+  return typeof root.run_id === 'string' && root.run_id.trim()
+    ? root.run_id.trim()
+    : null
 }
 
-function isMessageChunkEvent(data: unknown) {
-  const root = readRootStreamPayload(data)
-  return isRecord(root) && root.type === 'chunk'
-}
-
+/** 判断异常是否由当前页面主动取消请求产生。 */
 function isAbortError(error: unknown) {
   return error instanceof DOMException && error.name === 'AbortError'
 }
 
+/** 判断服务端运行状态是否仍需轮询。 */
 function isRunInProgress(status: ConsultationRunStatus['status']) {
   return status === 'pending' || status === 'running' || status === 'cancelling'
 }
 
+/** 将持久运行终态映射为界面生命周期，不把内部恢复原因展示给用户。 */
 function lifecycleForRunStatus(status: ConsultationRunStatus['status']) {
   switch (status) {
     case 'pending':
@@ -513,6 +469,7 @@ function lifecycleForRunStatus(status: ConsultationRunStatus['status']) {
   }
 }
 
+/** 等待下一次状态轮询，并在取消信号到达时立即结束。 */
 function waitForRunPoll(signal: AbortSignal) {
   return new Promise<void>((resolve) => {
     if (signal.aborted) {
