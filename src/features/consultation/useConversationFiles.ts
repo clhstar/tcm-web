@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import {
-  deleteConsultationFile,
-  downloadConsultationFile,
-  listConsultationFiles,
-  uploadConsultationFile,
+  deleteConversationFile,
+  downloadConversationFile,
+  listConversationFiles,
+  uploadConversationFile,
   type ConversationFile,
-} from '../../api/consultation'
+} from '../../api/conversation'
 
-export function useConsultationFiles(
+export function useConversationFiles(
   consultationId: number | null,
   refreshKey: string,
 ) {
@@ -20,7 +20,7 @@ export function useConsultationFiles(
     if (consultationId === null) return
 
     let active = true
-    void listConsultationFiles(consultationId)
+    void listConversationFiles(consultationId)
       .then((items) => {
         if (active) {
           setFiles(items)
@@ -48,8 +48,8 @@ export function useConsultationFiles(
     setIsBusy(true)
     setError('')
     try {
-      await uploadConsultationFile(consultationId, file)
-      setFiles(await listConsultationFiles(consultationId))
+      await uploadConversationFile(consultationId, file)
+      setFiles(await listConversationFiles(consultationId))
       setLoadedConsultationId(consultationId)
     } catch (reason) {
       setError(messageOf(reason))
@@ -63,7 +63,7 @@ export function useConsultationFiles(
     setIsBusy(true)
     setError('')
     try {
-      await deleteConsultationFile(consultationId, file.fileId)
+      await deleteConversationFile(consultationId, file.fileId)
       setFiles((current) => current.filter((item) => item.fileId !== file.fileId))
     } catch (reason) {
       setError(messageOf(reason))
@@ -77,7 +77,7 @@ export function useConsultationFiles(
     setIsBusy(true)
     setError('')
     try {
-      const result = await downloadConsultationFile(consultationId, file.fileId)
+      const result = await downloadConversationFile(consultationId, file.fileId)
       const url = URL.createObjectURL(result.blob)
       const anchor = document.createElement('a')
       anchor.href = url

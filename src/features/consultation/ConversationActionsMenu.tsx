@@ -6,10 +6,10 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { MaterialIcon } from "../../components/MaterialIcon";
-import type { Consultation } from "../../api/consultation";
+import type { Conversation } from "../../api/conversation";
 
 type ConversationActionsInput = {
-  consultation: Consultation;
+  consultation: Conversation;
   title: string;
   onRename: (id: number, title: string) => Promise<void>;
   onDelete: (id: number) => Promise<void>;

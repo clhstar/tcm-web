@@ -1,4 +1,4 @@
-import type { TcmFlowSseEvent } from '../../api/consultation'
+import type { TcmFlowSseEvent } from '../../api/conversation'
 import { isRecord, readRootStreamPayload } from '../../api/langGraphStream'
 
 export type PublicResponse = {

@@ -3,12 +3,12 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { MaterialIcon } from "../../components/MaterialIcon";
 import type {
-  Consultation,
-  ConsultationContext,
-  ConsultationMessage,
-  ConsultationRunStatus,
+  Conversation,
   ConversationFile,
-} from "../../api/consultation";
+  ConversationMessage,
+  ConversationRunStatus,
+} from "../../api/conversation";
+import type { ConsultationContext } from "../../api/consultation";
 import type { Patient } from "../../api/patient";
 import type { CollaborationStatus, CollaborationStep } from "./collaboration";
 import type {
@@ -19,7 +19,7 @@ import {
   ConsultationComposerFiles,
   ConsultationMessageArtifacts,
 } from "./ConsultationFilesPanel";
-import { useConsultationFiles } from "./useConsultationFiles";
+import { useConversationFiles } from "./useConversationFiles";
 import { ConversationActions } from "./ConversationActionsMenu";
 
 const TCM_FLOW_PENDING_MESSAGE = "正在连接 tcm-flow...";
@@ -34,8 +34,8 @@ const COLLABORATION_STATUS_LABELS: Readonly<
 };
 
 type ConsultationChatPanelProps = {
-  consultation: Consultation | null;
-  messages: ConsultationMessage[];
+  consultation: Conversation | null;
+  messages: ConversationMessage[];
   draft: string;
   archiveLabel: string;
   errorMessage: string;
@@ -44,7 +44,7 @@ type ConsultationChatPanelProps = {
   isRunActionPending: boolean;
   isRunBlocking: boolean;
   canControlRun: boolean;
-  runStatus: ConsultationRunStatus | null;
+  runStatus: ConversationRunStatus | null;
   tcmFlowEventsByMessageId: TcmFlowEventsByMessageId;
   collaborationByMessageId: Record<number, CollaborationStep[]>;
   taggedPatient: Patient | null;
@@ -111,7 +111,7 @@ export function ConsultationChatPanel({
   const latestAssistantMessageId = [...messages]
     .reverse()
     .find((message) => message.role === "ASSISTANT")?.id;
-  const fileWorkspace = useConsultationFiles(
+  const fileWorkspace = useConversationFiles(
     consultation?.id ?? null,
     consultation ? `${consultation.id}:${fileRefreshKey}` : "no-consultation"
   );
@@ -456,7 +456,7 @@ function ConversationTitleActions({
   onRename,
   onDelete,
 }: {
-  consultation: Consultation;
+  consultation: Conversation;
   onRename: (id: number, title: string) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
 }) {
@@ -497,7 +497,7 @@ function RunGovernanceControl({
 }: {
   isActionPending: boolean;
   canControl: boolean;
-  status: ConsultationRunStatus | null;
+  status: ConversationRunStatus | null;
   onCancel: () => Promise<void>;
   onResume: () => Promise<void>;
   onRetry: () => Promise<void>;
@@ -562,7 +562,7 @@ function RunGovernanceControl({
   );
 }
 
-function runGovernanceLabel(status: ConsultationRunStatus | null) {
+function runGovernanceLabel(status: ConversationRunStatus | null) {
   switch (status?.status) {
     case "interrupted":
       return status.resumable
@@ -656,7 +656,7 @@ function MessageContent({
   isFileBusy,
   onDownload,
 }: {
-  message: ConsultationMessage;
+  message: ConversationMessage;
   artifacts: ConversationFile[];
   isFileBusy: boolean;
   onDownload: (file: ConversationFile) => Promise<void>;
@@ -683,7 +683,7 @@ function MessageContent({
 
 function groupArtifactsByAssistantMessage(
   files: ConversationFile[],
-  messages: ConsultationMessage[]
+  messages: ConversationMessage[]
 ) {
   const grouped = new Map<number, ConversationFile[]>();
   const assistantMessages = messages.filter(
@@ -704,7 +704,7 @@ function groupArtifactsByAssistantMessage(
   return grouped;
 }
 
-function isPendingAssistantMessage(message: ConsultationMessage) {
+function isPendingAssistantMessage(message: ConversationMessage) {
   return (
     message.role === "ASSISTANT" && message.content === TCM_FLOW_PENDING_MESSAGE
   );

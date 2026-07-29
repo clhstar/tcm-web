@@ -475,3 +475,80 @@ final result: passed
 - Findings: no actionable P0, P1, or P2 differences remain for the requested typography scope.
 
 final result: passed
+
+## 2026-07-29 Consultation-record header annotation
+
+- Source visual truth: `/var/folders/60/_snfm7116mn7djpxc80cfxlw0000gn/T/codex-clipboard-9bd72574-06bc-4f26-b9bc-ce4d2c18bfff.png`
+- Implementation screenshot: `/Users/chenliheng/.codex/visualizations/2026/07/29/019fadf7-87cd-77a2-a085-7cad7b50c1f4/consultation-records-annotation-final-1400.png`
+- Side-by-side comparison: `/Users/chenliheng/.codex/visualizations/2026/07/29/019fadf7-87cd-77a2-a085-7cad7b50c1f4/consultation-records-annotation-comparison.png`
+- Source pixels: 2048 × 1146, including desktop window chrome.
+- Implementation pixels and CSS viewport: 1400 × 900 at device pixel ratio 1.
+- Normalization: both images were scaled to 1000px wide in the comparison; the review focused on the annotated topbar and removed introduction region rather than fixture-dependent row count.
+- State: authenticated consultation-record list with data loaded.
+
+### Comparison evidence
+
+The annotated introduction block is removed, so the table begins directly below the page topbar with the existing page padding. The filtered record-count badge is aligned to the right side of the shared topbar. Sidebar, table, status badges, row layout, colors, radii, and existing interactions remain unchanged. The topbar and former introduction region remain readable in the full-view comparison, so a separate focused crop was not required.
+
+### Required fidelity surfaces
+
+- Fonts and typography: passed. Existing application family, weights, hierarchy, wrapping, and antialiasing are unchanged.
+- Spacing and layout rhythm: passed. The page retains its 20px inset and existing list spacing while removing the annotated block.
+- Colors and visual tokens: passed. Existing neutral topbar and count-badge tokens are reused.
+- Image quality and asset fidelity: passed. No image assets were added or changed.
+- Copy and content: passed. Only the annotated visible introduction copy was removed; a visually hidden section heading preserves the accessible page name.
+
+### Findings and comparison history
+
+1. Earlier finding: the page repeated its title and explanatory copy inside the content region, and the record count remained attached to that block.
+2. Fix: removed the visible introduction block, retained a visually hidden section heading, and rendered the filtered record count directly in the shared page topbar.
+3. Post-fix evidence: `consultation-records-annotation-final-1400.png` and `consultation-records-annotation-comparison.png`.
+4. No actionable P0, P1, or P2 differences remain for the annotated scope.
+
+### Verification
+
+- Record list and detail navigation remain functional.
+- Desktop layout was visually checked at 1400 × 900.
+- The responsive topbar uses a two-column grid so breadcrumb and count do not overlap.
+- Fresh browser load contained no console errors.
+- ESLint passed, production build passed, and 110 tests passed.
+
+final result: passed
+
+## 2026-07-29 Consultation-record detail header cleanup
+
+- Source visual truth: `/var/folders/60/_snfm7116mn7djpxc80cfxlw0000gn/T/codex-clipboard-b39f7a22-678c-437e-b790-8f08ecfc898f.png`
+- Implementation screenshot: `/Users/chenliheng/.codex/visualizations/2026/07/29/019fadf7-87cd-77a2-a085-7cad7b50c1f4/consultation-record-detail-header-clean.jpg`
+- Side-by-side comparison: `/Users/chenliheng/.codex/visualizations/2026/07/29/019fadf7-87cd-77a2-a085-7cad7b50c1f4/consultation-record-detail-header-clean-comparison.png`
+- Source pixels: 2048 × 1146, including desktop window chrome.
+- Implementation pixels and CSS viewport: 1400 × 900 at device pixel ratio 1.
+- Normalization: both images were scaled to 1000px wide in the combined comparison. The source and implementation use different fixture data, so QA evaluated the annotated header structure and preserved controls rather than literal patient content.
+- State: authenticated consultation-record detail with structured results loaded.
+
+### Comparison evidence
+
+The three annotated header elements—`结构化问诊记录`, the complaint subtitle, and the consultation-status badge—are absent in the implementation. The patient record title, back link, `查看原对话` action, divider, metadata, risk notice, and structured-result cards remain visible. The full-view comparison keeps the affected header region readable, so a separate focused crop was not needed.
+
+### Required fidelity surfaces
+
+- Fonts and typography: passed. Removing the eyebrow and subtitle leaves the existing patient-title hierarchy intact without introducing new font styles or wrapping.
+- Spacing and layout rhythm: passed. The title and retained action remain aligned on the header baseline, and the removed elements do not leave orphaned margins.
+- Colors and visual tokens: passed. No color or token changes were introduced; the remaining divider and action retain their existing styling.
+- Image quality and asset fidelity: passed. Existing Material icons remain unchanged, and no image assets or approximations were introduced.
+- Copy and content: passed. Only the three user-annotated strings/status display were removed; the structured medical content and original-conversation entry remain unchanged.
+
+### Findings and comparison history
+
+1. Source finding: three red boxes identified the eyebrow, complaint subtitle, and status badge for deletion.
+2. Fix: removed those three rendered elements, removed the now-unused status-class calculation, and removed the obsolete subtitle CSS rule.
+3. Post-fix evidence: `consultation-record-detail-header-clean.jpg` and `consultation-record-detail-header-clean-comparison.png`.
+4. No actionable P0, P1, or P2 differences remain for the annotated scope.
+
+### Verification
+
+- Primary route load and the retained `查看原对话` destination were inspected in the browser.
+- DOM verification confirmed the detail header contains only `返回问诊记录`, the patient record title, and `查看原对话`.
+- Browser console contained no warnings or errors.
+- ESLint passed, the production build passed, and 110 tests passed.
+
+final result: passed

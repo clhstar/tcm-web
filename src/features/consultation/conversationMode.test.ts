@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import type { Consultation, ConsultationContext } from '../../api/consultation'
+import type { Conversation } from '../../api/conversation'
+import type { ConsultationContext } from '../../api/consultation'
 import type { Patient } from '../../api/patient'
 import {
   applyConsultationContext,
-  emptyConversationState,
+  composerMode,
+  emptyConversationMode,
+  hasConsultationRecord,
   isContextForActiveConversation,
   messagePatientId,
-  restoreConversationState,
-} from './consultationWorkspaceState'
+  restoreConversationMode,
+} from './conversationMode'
 
 const patient: Patient = {
   id: 123,
@@ -31,7 +34,7 @@ function context(
 function conversation(
   consultationContext: ConsultationContext | null,
   patientId: number | null = patient.id,
-): Consultation {
+): Conversation {
   return {
     id: 7,
     patientId,
@@ -53,10 +56,12 @@ function conversation(
   }
 }
 
-describe('consultation workspace state contract', () => {
+describe('conversation mode contract', () => {
   it('does not attach a patient id unless the tag is explicit', () => {
     expect(messagePatientId(null)).toBeUndefined()
     expect(messagePatientId(patient)).toBe(patient.id)
+    expect(composerMode(null)).toBe('CHAT')
+    expect(composerMode(patient)).toBe('CONSULTATION')
   })
 
   it('rejects consultation context emitted by a conversation that is no longer active', () => {
@@ -67,7 +72,7 @@ describe('consultation workspace state contract', () => {
   it('restores persisted context from a conversation list item', () => {
     const inProgress = context('IN_PROGRESS', 4)
 
-    expect(restoreConversationState(conversation(inProgress), patient)).toEqual({
+    expect(restoreConversationMode(conversation(inProgress), patient)).toEqual({
       consultationContext: inProgress,
       taggedPatient: patient,
       showTagSuggestion: false,
@@ -77,7 +82,7 @@ describe('consultation workspace state contract', () => {
   it('restores a paused context without recreating its removed patient tag', () => {
     const paused = context('PAUSED', 4)
 
-    expect(restoreConversationState(conversation(paused), patient)).toEqual({
+    expect(restoreConversationMode(conversation(paused), patient)).toEqual({
       consultationContext: paused,
       taggedPatient: null,
       showTagSuggestion: false,
@@ -85,7 +90,7 @@ describe('consultation workspace state contract', () => {
   })
 
   it('keeps nullable-patient ordinary conversations untagged', () => {
-    expect(restoreConversationState(conversation(null, null), null)).toEqual({
+    expect(restoreConversationMode(conversation(null, null), null)).toEqual({
       consultationContext: null,
       taggedPatient: null,
       showTagSuggestion: false,
@@ -106,10 +111,15 @@ describe('consultation workspace state contract', () => {
   )
 
   it('clears both persisted context and local tag for a new conversation', () => {
-    expect(emptyConversationState()).toEqual({
+    expect(emptyConversationMode()).toEqual({
       consultationContext: null,
       taggedPatient: null,
       showTagSuggestion: false,
     })
+  })
+
+  it('classifies persisted consultation records independently from composer mode', () => {
+    expect(hasConsultationRecord(conversation(null))).toBe(false)
+    expect(hasConsultationRecord(conversation(context('PAUSED')))).toBe(true)
   })
 })

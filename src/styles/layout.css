@@ -497,6 +497,13 @@
   background: #edf0f2;
 }
 
+.dashboard-topbar-actions {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .dashboard-topbar p {
   margin: 0 0 5px;
   color: var(--app-text-muted);

@@ -24,7 +24,7 @@ import {
   ConsultationComposerFiles,
   ConsultationMessageArtifacts,
 } from './ConsultationFilesPanel'
-import { useConsultationFiles } from './useConsultationFiles'
+import { useConversationFiles } from './useConversationFiles'
 
 const uploaded = {
   fileId: 'file-1',
@@ -47,7 +47,7 @@ const artifact = {
 }
 
 function FilesHarness() {
-  const workspace = useConsultationFiles(101, 'idle')
+  const workspace = useConversationFiles(101, 'idle')
   return (
     <>
       <ConsultationComposerFiles

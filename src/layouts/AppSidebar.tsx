@@ -4,7 +4,7 @@ import { navigationItems } from "../app/navigation";
 import { MaterialIcon } from "../components/MaterialIcon";
 import { useNotification } from "../components/notificationContext";
 import { FRONTEND_VERSION } from "../config/global";
-import type { Consultation } from "../api/consultation";
+import type { Conversation } from "../api/conversation";
 import { ConversationActions } from "../features/consultation/ConversationActionsMenu";
 import {
   useDeleteConversation,
@@ -288,7 +288,7 @@ function SidebarConversationItem({
   onRename,
   onDelete,
 }: {
-  consultation: Consultation;
+  consultation: Conversation;
   onRename: (id: number, title: string) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
 }) {

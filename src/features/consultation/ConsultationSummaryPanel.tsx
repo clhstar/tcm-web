@@ -1,8 +1,8 @@
 import { MaterialIcon } from '../../components/MaterialIcon'
-import type { Consultation } from '../../api/consultation'
+import type { Conversation } from '../../api/conversation'
 
 type ConsultationSummaryPanelProps = {
-  consultation: Consultation | null
+  consultation: Conversation | null
   isCompleting: boolean
   isLoading: boolean
   onComplete: () => Promise<void>

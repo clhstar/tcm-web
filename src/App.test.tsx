@@ -59,6 +59,14 @@ type ConversationDto = {
     status: 'IN_PROGRESS' | 'PAUSED' | 'COMPLETED' | 'CANCELLED'
     record_version: number
     analysis_ready: boolean
+    chief_complaint?: string
+    symptoms?: string
+    tongue?: string
+    pulse?: string
+    symptom_summary?: string
+    possible_syndrome?: string
+    suggestion?: string
+    risk_warning?: string
   } | null
   createTime: string
   updateTime: string
@@ -107,6 +115,13 @@ const activeConversation: ConversationDto = {
     status: 'IN_PROGRESS',
     record_version: 4,
     analysis_ready: true,
+    symptoms: '饭后胃胀，嗳气，食欲下降',
+    tongue: '舌淡，苔薄白',
+    pulse: '脉缓',
+    symptom_summary: '饭后胃胀反复三周，伴嗳气和食欲下降。',
+    possible_syndrome: '脾胃气虚倾向',
+    suggestion: '建议结合线下面诊进一步评估。',
+    risk_warning: '若出现持续剧烈腹痛、呕血或黑便，请立即就医。',
   },
 }
 
@@ -437,9 +452,32 @@ describe('App routes and consultation entry', () => {
 
     expect(await screen.findByRole('heading', { name: '问诊记录', level: 2 })).toBeInTheDocument()
     const savedRecords = await screen.findByLabelText('已保存的问诊记录')
+    const recordsTopbar = screen.getByRole('main').querySelector('.dashboard-topbar')
+    expect(recordsTopbar).not.toBeNull()
+    expect(within(recordsTopbar as HTMLElement).getByText('1 条记录')).toBeInTheDocument()
+    expect(screen.queryByText('仅展示已添加问诊标签的对话，患者、主诉和问诊状态会随对话自动保存。')).not.toBeInTheDocument()
     expect(within(savedRecords).getByText('张三 · 记录 #901')).toBeInTheDocument()
     expect(within(savedRecords).queryByText('未绑定患者')).not.toBeInTheDocument()
     expect(window.location.pathname).toBe('/consultation-records')
+
+    await user.click(within(savedRecords).getByRole('link', {
+      name: '查看张三的结构化问诊结果：新对话',
+    }))
+
+    const detailHeading = await screen.findByRole('heading', { name: '张三的问诊记录', level: 2 })
+    expect(detailHeading).toBeInTheDocument()
+    const detailHeader = detailHeading.closest('.consultation-record-detail-header')
+    expect(detailHeader).not.toBeNull()
+    expect(within(detailHeader as HTMLElement).queryByText('结构化问诊记录')).not.toBeInTheDocument()
+    expect(within(detailHeader as HTMLElement).queryByText('新对话')).not.toBeInTheDocument()
+    expect(within(detailHeader as HTMLElement).queryByText('已完成')).not.toBeInTheDocument()
+    expect(screen.getByText('饭后胃胀反复三周，伴嗳气和食欲下降。')).toBeInTheDocument()
+    expect(screen.getByText('脾胃气虚倾向')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '查看原对话' })).toHaveAttribute(
+      'href',
+      `/consultation/${activeConversation.id}`,
+    )
+    expect(window.location.pathname).toBe(`/consultation-records/${activeConversation.id}`)
   })
 
   it('refreshes an expired access token from localStorage on startup and restores the saved login', async () => {

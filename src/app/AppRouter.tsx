@@ -4,13 +4,16 @@ import { AuthScreen } from '../features/auth/AuthScreen'
 import { useAuth } from '../features/auth/authContext'
 import { AppLayout } from '../layouts/AppLayout'
 
-const PatientIntakeWorkspace = lazy(() =>
-  import('../features/patient/PatientIntakeWorkspace').then((module) => ({
-    default: module.PatientIntakeWorkspace,
+const ConversationWorkspace = lazy(() =>
+  import('../features/consultation/ConversationWorkspace').then((module) => ({
+    default: module.ConversationWorkspace,
   })),
 )
 const ConsultationRecordsPage = lazy(() =>
   import('../features/consultation/ConsultationRecordsPage').then((module) => ({ default: module.ConsultationRecordsPage })),
+)
+const ConsultationRecordDetailPage = lazy(() =>
+  import('../features/consultation/ConsultationRecordDetailPage').then((module) => ({ default: module.ConsultationRecordDetailPage })),
 )
 const PatientDirectoryPage = lazy(() =>
   import('../features/patient/pages/PatientDirectoryPage').then((module) => ({ default: module.PatientDirectoryPage })),
@@ -53,13 +56,14 @@ export function AppRouter() {
           }
         >
           <Route index element={<Navigate to="/consultation" replace />} />
-          <Route path="consultation" element={<LazyRoute><PatientIntakeWorkspace view="chat" /></LazyRoute>} />
-          <Route path="consultation/new" element={<LazyRoute><PatientIntakeWorkspace view="chat" /></LazyRoute>} />
-          <Route path="consultation/:consultationId" element={<LazyRoute><PatientIntakeWorkspace view="chat" /></LazyRoute>} />
+          <Route path="consultation" element={<LazyRoute><ConversationWorkspace view="chat" /></LazyRoute>} />
+          <Route path="consultation/new" element={<LazyRoute><ConversationWorkspace view="chat" /></LazyRoute>} />
+          <Route path="consultation/:consultationId" element={<LazyRoute><ConversationWorkspace view="chat" /></LazyRoute>} />
           <Route path="consultation-records" element={<LazyRoute><ConsultationRecordsPage /></LazyRoute>} />
+          <Route path="consultation-records/:consultationId" element={<LazyRoute><ConsultationRecordDetailPage /></LazyRoute>} />
           <Route path="history" element={<Navigate to="/consultation-records" replace />} />
-          <Route path="history/:consultationId/summary" element={<Navigate to="/consultation-records" replace />} />
-          <Route path="summary" element={<LazyRoute><PatientIntakeWorkspace view="summary" /></LazyRoute>} />
+          <Route path="history/:consultationId/summary" element={<LazyRoute><ConsultationRecordDetailPage /></LazyRoute>} />
+          <Route path="summary" element={<Navigate to="/consultation-records" replace />} />
           <Route path="patients" element={<LazyRoute><PatientDirectoryPage /></LazyRoute>} />
           <Route path="patients/new" element={<LazyRoute><PatientCreatePage /></LazyRoute>} />
           <Route path="patients/:patientId" element={<LazyRoute><PatientProfilePage /></LazyRoute>} />

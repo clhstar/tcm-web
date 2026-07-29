@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { parseConversationTitle, useConsultationStream } from './useConsultationStream'
-import type { Consultation } from '../../../api/consultation'
+import type { Conversation } from '../../../api/conversation'
 
 function jsonResponse(body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -55,7 +55,7 @@ const consultation = {
   possibleSyndrome: null,
   suggestion: null,
   riskWarning: null,
-} as Consultation
+} as Conversation
 
 describe('useConsultationStream run recovery', () => {
   afterEach(() => {

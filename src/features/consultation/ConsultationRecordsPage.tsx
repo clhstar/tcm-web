@@ -1,24 +1,18 @@
 import { Link } from 'react-router'
 import { MaterialIcon } from '../../components/MaterialIcon'
-import type { Consultation } from '../../api/consultation'
+import type { Conversation } from '../../api/conversation'
 import { useRecentConversations } from './conversationQueries'
+import { hasConsultationRecord } from './conversationMode'
 
 export function ConsultationRecordsPage() {
   const conversationQuery = useRecentConversations(50)
   const records = (conversationQuery.data?.records ?? []).filter(
-    (consultation) => consultation.consultationContext !== null,
+    hasConsultationRecord,
   )
 
   return (
     <section className="consultation-records-page" aria-labelledby="consultation-records-title">
-      <header className="consultation-records-header">
-        <div>
-          <p className="status-label">结构化问诊</p>
-          <h2 id="consultation-records-title">问诊记录</h2>
-          <p>仅展示已添加问诊标签的对话，患者、主诉和问诊状态会随对话自动保存。</p>
-        </div>
-        <span className="consultation-record-count">{records.length} 条记录</span>
-      </header>
+      <h2 id="consultation-records-title" className="visually-hidden">问诊记录</h2>
 
       {conversationQuery.isPending ? (
         <div className="consultation-records-state" role="status">正在加载问诊记录...</div>
@@ -54,7 +48,7 @@ export function ConsultationRecordsPage() {
   )
 }
 
-function ConsultationRecordRow({ consultation }: { consultation: Consultation }) {
+function ConsultationRecordRow({ consultation }: { consultation: Conversation }) {
   const context = consultation.consultationContext
   const patientName = consultation.patientName?.trim() || '未绑定患者'
   const title = consultation.chiefComplaint?.trim() || '未记录主诉'
@@ -63,8 +57,8 @@ function ConsultationRecordRow({ consultation }: { consultation: Consultation })
   return (
     <Link
       className="consultation-record-row"
-      to={`/consultation/${consultation.id}`}
-      aria-label={`打开${patientName}的问诊：${title}`}
+      to={`/consultation-records/${consultation.id}`}
+      aria-label={`查看${patientName}的结构化问诊结果：${title}`}
     >
       <span className="consultation-record-primary">
         <span className="consultation-record-avatar" aria-hidden="true">{patientName.slice(0, 1)}</span>

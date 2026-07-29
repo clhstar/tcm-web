@@ -1,19 +1,21 @@
 import { type Dispatch, useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import {
-  cancelConsultationRun,
-  consultationContextSchema,
-  getConsultationRunStatus,
-  getCurrentConsultationRun,
-  listConsultationMessages,
-  resumeConsultationRun,
-  retryConsultationRun,
-  streamConsultationRun,
-  type Consultation,
-  type ConsultationContext,
-  type ConsultationMessage,
-  type ConsultationRunStatus,
+  cancelConversationRun,
+  getConversationRunStatus,
+  getCurrentConversationRun,
+  listConversationMessages,
+  resumeConversationRun,
+  retryConversationRun,
+  streamConversationRun,
+  type Conversation,
+  type ConversationMessage,
+  type ConversationRunStatus,
   type TcmFlowSseEvent,
   type TcmFlowMessage,
+} from '../../../api/conversation'
+import {
+  consultationContextSchema,
+  type ConsultationContext,
 } from '../../../api/consultation'
 import { isRecord, readRootStreamPayload } from '../../../api/langGraphStream'
 import { readPublicResponse } from '../nativeStream'
@@ -30,7 +32,7 @@ const TCM_FLOW_FAILURE_MESSAGE = '本次问诊助手回复失败，请稍后重�
 const RUN_STATUS_POLL_INTERVAL_MS = 1_000
 
 type SendConsultationMessageInput = {
-  consultation: Consultation
+  consultation: Conversation
   content: string
   replaceMessages?: boolean
   patientId?: number
@@ -59,7 +61,7 @@ type StreamContext = {
 export function useConsultationStream() {
   const [state, dispatch] = useReducer(consultationStreamReducer, initialConsultationStreamState)
   const [runId, setRunId] = useState<string | null>(null)
-  const [runStatus, setRunStatus] = useState<ConsultationRunStatus | null>(null)
+  const [runStatus, setRunStatus] = useState<ConversationRunStatus | null>(null)
   const [isRunActionPending, setIsRunActionPending] = useState(false)
   const runActionPendingRef = useRef(false)
   const sequenceRef = useRef(0)
@@ -113,7 +115,7 @@ export function useConsultationStream() {
     consultationId: number,
     observedRunId: string,
     callbacks: RunRecoveryCallbacks,
-    initialStatus?: ConsultationRunStatus,
+    initialStatus?: ConversationRunStatus,
     options: MonitorRunOptions = {},
   ) => {
     stopRunMonitor()
@@ -125,7 +127,7 @@ export function useConsultationStream() {
 
     try {
       while (!controller.signal.aborted && monitorSequence === monitorSequenceRef.current) {
-        status ??= await getConsultationRunStatus(
+        status ??= await getConversationRunStatus(
           consultationId,
           observedRunId,
           controller.signal,
@@ -151,7 +153,7 @@ export function useConsultationStream() {
           dispatch({ type: 'lifecycle', lifecycle: 'reconciling' })
         }
         try {
-          const historyMessages = await listConsultationMessages(consultationId)
+          const historyMessages = await listConversationMessages(consultationId)
           if (controller.signal.aborted || monitorSequence !== monitorSequenceRef.current) return
           const restored = restoreTcmFlowHistory(consultationId, historyMessages)
           dispatch({ type: 'restore', ...restored })
@@ -188,7 +190,7 @@ export function useConsultationStream() {
     const monitorSequence = monitorSequenceRef.current
 
     try {
-      const current = await getCurrentConsultationRun(consultationId, controller.signal)
+      const current = await getCurrentConversationRun(consultationId, controller.signal)
       if (controller.signal.aborted || monitorSequence !== monitorSequenceRef.current) return
       setRunId(current?.run_id ?? null)
       setRunStatus(current)
@@ -218,9 +220,9 @@ export function useConsultationStream() {
     setIsRunActionPending(true)
     try {
       const control = {
-        cancel: cancelConsultationRun,
-        resume: resumeConsultationRun,
-        retry: retryConsultationRun,
+        cancel: cancelConversationRun,
+        resume: resumeConversationRun,
+        retry: retryConversationRun,
       }[action]
       const status = await control(context.consultationId, runId)
       setRunStatus(status)
@@ -273,7 +275,7 @@ export function useConsultationStream() {
       sequence === sequenceRef.current && !abortController.signal.aborted
 
     try {
-      const result = await streamConsultationRun({
+      const result = await streamConversationRun({
         consultationId: consultation.id,
         message: content,
         patientId,
@@ -313,7 +315,7 @@ export function useConsultationStream() {
         !context.hasPublicResponse
       ) {
         dispatch({ type: 'lifecycle', lifecycle: 'reconciling' })
-        const historyMessages = await listConsultationMessages(consultation.id)
+        const historyMessages = await listConversationMessages(consultation.id)
         if (!isCurrent()) return false
         const restored = restoreTcmFlowHistory(consultation.id, historyMessages)
         dispatch({ type: 'restore', ...restored })
@@ -417,7 +419,7 @@ function createLocalMessage(
   consultationRecordId: number,
   role: 'USER' | 'ASSISTANT',
   content: string,
-): ConsultationMessage {
+): ConversationMessage {
   return {
     id: -Date.now() - Math.floor(Math.random() * 1000),
     consultationRecordId,
@@ -443,12 +445,12 @@ function isAbortError(error: unknown) {
 }
 
 /** 判断服务端运行状态是否仍需轮询。 */
-function isRunInProgress(status: ConsultationRunStatus['status']) {
+function isRunInProgress(status: ConversationRunStatus['status']) {
   return status === 'pending' || status === 'running' || status === 'cancelling'
 }
 
 /** 将持久运行终态映射为界面生命周期，不把内部恢复原因展示给用户。 */
-function lifecycleForRunStatus(status: ConsultationRunStatus['status']) {
+function lifecycleForRunStatus(status: ConversationRunStatus['status']) {
   switch (status) {
     case 'pending':
     case 'running':

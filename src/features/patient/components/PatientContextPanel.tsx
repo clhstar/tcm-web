@@ -1,11 +1,11 @@
-import type { Consultation } from '../../../api/consultation'
+import type { Conversation } from '../../../api/conversation'
 import type { Patient } from '../../../api/patient'
 import { MaterialIcon } from '../../../components/MaterialIcon'
 import { genderLabel, getAge } from '../patientUtils'
 
 type PatientContextPanelProps = {
   patient: Patient | null
-  consultation: Consultation | null
+  consultation: Conversation | null
   consultationCount: number
   isLoading: boolean
   onOpenArchiveSheet: () => void

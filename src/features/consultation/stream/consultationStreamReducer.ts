@@ -1,4 +1,4 @@
-import type { ConsultationMessage } from '../../../api/consultation'
+import type { ConversationMessage } from '../../../api/conversation'
 import type { CollaborationStep } from '../collaboration'
 import type { TcmFlowEventsByMessageId } from '../tcmFlowHistory'
 
@@ -16,7 +16,7 @@ export type ConsultationStreamLifecycle =
 
 export type ConsultationStreamState = {
   lifecycle: ConsultationStreamLifecycle
-  messages: ConsultationMessage[]
+  messages: ConversationMessage[]
   eventsByMessageId: TcmFlowEventsByMessageId
   collaborationByMessageId: Record<number, CollaborationStep[]>
 }
@@ -34,14 +34,14 @@ export type ConsultationStreamAction =
   | { type: 'lifecycle'; lifecycle: ConsultationStreamLifecycle }
   | {
       type: 'restore'
-      messages: ConsultationMessage[]
+      messages: ConversationMessage[]
       eventsByMessageId: TcmFlowEventsByMessageId
       collaborationByMessageId: Record<number, CollaborationStep[]>
     }
   | {
       type: 'start'
-      userMessage: ConsultationMessage
-      assistantMessage: ConsultationMessage
+      userMessage: ConversationMessage
+      assistantMessage: ConversationMessage
       replaceMessages: boolean
     }
   | { type: 'replace-assistant'; messageId: number; content: string }

@@ -18,6 +18,7 @@ export const navigationItems: NavigationItem[] = [
 ]
 
 export function getPageTitle(pathname: string) {
+  if (/^\/consultation-records\/[^/]+$/.test(pathname)) return '问诊结果'
   if (pathname.startsWith('/summary') || pathname.includes('/summary')) return '问诊总结'
   if (pathname.startsWith('/consultation-records')) return '问诊记录'
   if (pathname.startsWith('/patients')) return '患者档案'
@@ -27,6 +28,12 @@ export function getPageTitle(pathname: string) {
 }
 
 export function getBreadcrumbItems(pathname: string, search: string): BreadcrumbItem[] {
+  if (/^\/consultation-records\/[^/]+$/.test(pathname) || /^\/history\/[^/]+\/summary$/.test(pathname)) {
+    return [
+      { label: '问诊记录', to: '/consultation-records' },
+      { label: '结构化结果' },
+    ]
+  }
   if (pathname.startsWith('/patients')) {
     const parent = { label: '患者档案', to: '/patients' }
     if (pathname === '/patients/new') return [parent, { label: '新增档案' }]

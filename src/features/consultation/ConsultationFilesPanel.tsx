@@ -1,5 +1,5 @@
 import { useRef, type ChangeEvent } from 'react'
-import type { ConversationFile } from '../../api/consultation'
+import type { ConversationFile } from '../../api/conversation'
 import { MaterialIcon } from '../../components/MaterialIcon'
 
 const ACCEPTED_FILES = '.txt,.md,.json,.csv,.pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg'

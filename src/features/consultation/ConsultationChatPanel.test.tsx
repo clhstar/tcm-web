@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Consultation, ConsultationRunStatus } from '../../api/consultation'
+import type { Conversation, ConversationRunStatus } from '../../api/conversation'
 
 const consultationApi = vi.hoisted(() => ({
   listFiles: vi.fn(),
@@ -35,12 +35,12 @@ const consultation = {
   possibleSyndrome: null,
   suggestion: null,
   riskWarning: null,
-} as Consultation
+} as Conversation
 
 function runStatus(
-  status: ConsultationRunStatus['status'],
-  overrides: Partial<ConsultationRunStatus> = {},
-): ConsultationRunStatus {
+  status: ConversationRunStatus['status'],
+  overrides: Partial<ConversationRunStatus> = {},
+): ConversationRunStatus {
   return {
     run_id: 'run-1',
     thread_id: 'thread-1',

@@ -1,4 +1,4 @@
-import type { ConsultationMessage, TcmFlowMessage } from '../../api/consultation'
+import type { ConversationMessage, TcmFlowMessage } from '../../api/conversation'
 import { restoreCollaborationFromTrace, type CollaborationStep } from './collaboration'
 
 export type TcmFlowToolEvent = {
@@ -12,7 +12,7 @@ export type TcmFlowToolEvent = {
 export type TcmFlowEventsByMessageId = Record<number, TcmFlowToolEvent[]>
 
 export type RestoredTcmFlowHistory = {
-  messages: ConsultationMessage[]
+  messages: ConversationMessage[]
   eventsByMessageId: TcmFlowEventsByMessageId
   collaborationByMessageId: Record<number, CollaborationStep[]>
 }
@@ -21,7 +21,7 @@ export function restoreTcmFlowHistory(
   consultationRecordId: number,
   historyMessages: TcmFlowMessage[],
 ): RestoredTcmFlowHistory {
-  const messages: ConsultationMessage[] = []
+  const messages: ConversationMessage[] = []
   const eventsByMessageId: TcmFlowEventsByMessageId = {}
   const collaborationByMessageId: Record<number, CollaborationStep[]> = {}
   let pendingEvents: TcmFlowToolEvent[] = []

@@ -1,6 +1,7 @@
 import { useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { getBreadcrumbItems, getPageTitle } from '../app/navigation'
+import { ConsultationRecordCount } from '../features/consultation/ConsultationRecordCount'
 import { Breadcrumb } from '../shared/ui/Breadcrumb'
 import { AppSidebar } from './AppSidebar'
 import { MobileNav } from './MobileNav'
@@ -33,6 +34,7 @@ export function AppLayout({ children, userName, onLogout }: AppLayoutProps) {
   const pageTitle = breadcrumbs.at(-1)?.label ?? getPageTitle(location.pathname)
   const isConsultationPage =
     location.pathname === '/consultation' || location.pathname.startsWith('/consultation/')
+  const isConsultationRecordList = location.pathname === '/consultation-records'
   const mainClassName = isConsultationPage ? 'dashboard-main without-breadcrumb' : 'dashboard-main'
 
   function toggleSidebar() {
@@ -109,6 +111,9 @@ export function AppLayout({ children, userName, onLogout }: AppLayoutProps) {
         {isConsultationPage ? null : (
           <header className="dashboard-topbar">
             <Breadcrumb items={breadcrumbs} onNavigate={navigate} />
+            <div className="dashboard-topbar-actions">
+              {isConsultationRecordList ? <ConsultationRecordCount /> : null}
+            </div>
             <h1 className="visually-hidden">{pageTitle}</h1>
           </header>
         )}
