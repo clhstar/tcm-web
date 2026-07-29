@@ -1123,6 +1123,15 @@ function mergeConsultationContext(
     patientId: shouldBindPatient ? patient.id : consultation.patientId,
     patientName: shouldBindPatient ? patient.name : consultation.patientName,
     consultationContext: context,
+    chiefComplaint:
+      context.chief_complaint ?? consultation.chiefComplaint,
+    symptoms: context.symptoms ?? null,
+    tongue: context.tongue ?? null,
+    pulse: context.pulse ?? null,
+    symptomSummary: context.symptom_summary ?? null,
+    possibleSyndrome: context.possible_syndrome ?? null,
+    suggestion: context.suggestion ?? null,
+    riskWarning: context.risk_warning ?? null,
     statusName: consultationStatusLabel(context.status),
   };
 }

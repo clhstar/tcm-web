@@ -1,6 +1,7 @@
 import { type Dispatch, useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import {
   cancelConsultationRun,
+  consultationContextSchema,
   getConsultationRunStatus,
   getCurrentConsultationRun,
   listConsultationMessages,
@@ -407,11 +408,8 @@ export function parseConversationTitle(value: unknown): string | null {
 
 /** 校验并读取服务端病例投影 DTO，不接受任意内部状态。 */
 function parseConsultationContext(value: unknown): ConsultationContext | null {
-  if (!isRecord(value)) return null
-  const status = value.status
-  if (status !== 'IN_PROGRESS' && status !== 'PAUSED' && status !== 'COMPLETED' && status !== 'CANCELLED') return null
-  if (typeof value.consultation_record_id !== 'number' || typeof value.record_version !== 'number' || typeof value.analysis_ready !== 'boolean') return null
-  return { consultation_record_id: value.consultation_record_id, status, record_version: value.record_version, analysis_ready: value.analysis_ready }
+  const parsed = consultationContextSchema.safeParse(value)
+  return parsed.success ? parsed.data : null
 }
 
 /** 创建发送期间的本地消息占位，ID 仅用于当前界面归并。 */

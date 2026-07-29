@@ -33,22 +33,45 @@ export function ConsultationSummaryPanel({
         <>
           <dl className="consultation-summary-grid">
             <div>
-              <dt>对话主题</dt>
-              <dd>{consultation.chiefComplaint || '新对话'}</dd>
+              <dt>主诉</dt>
+              <dd>{consultation.chiefComplaint || '待补充'}</dd>
             </div>
             <div>
-              <dt>问诊状态</dt>
-              <dd>{consultation.statusName || '普通对话'}</dd>
+              <dt>已采集症状</dt>
+              <dd>{consultation.symptoms || '待补充'}</dd>
             </div>
             <div>
-              <dt>安全分析</dt>
-              <dd>{context?.analysis_ready ? '已由 tcm-flow 生成，可人工确认完成' : '尚未就绪，请继续补充信息'}</dd>
+              <dt>病例摘要</dt>
+              <dd>{consultation.symptomSummary || '正在随问诊更新'}</dd>
             </div>
             <div>
-              <dt>说明</dt>
-              <dd>分析内容保存在问诊记录中，本页不再调用旧的 Java 总结接口。</dd>
+              <dt>舌象 / 脉象</dt>
+              <dd>{[consultation.tongue, consultation.pulse].filter(Boolean).join(' / ') || '未采集'}</dd>
             </div>
           </dl>
+
+          {context?.analysis_ready ? (
+            <dl className="consultation-summary-grid consultation-analysis-grid">
+              <div>
+                <dt>辨证方向</dt>
+                <dd>{consultation.possibleSyndrome || '证据不足，未形成候选方向'}</dd>
+              </div>
+              <div>
+                <dt>分析建议</dt>
+                <dd>{consultation.suggestion || '已完成安全分析'}</dd>
+              </div>
+              <div>
+                <dt>风险提示</dt>
+                <dd>{consultation.riskWarning || '未记录额外风险提示'}</dd>
+              </div>
+              <div>
+                <dt>问诊状态</dt>
+                <dd>{consultation.statusName || '问诊中'}</dd>
+              </div>
+            </dl>
+          ) : (
+            <p className="muted-line">病例结构已生成并会随回答实时更新；补齐关键安全信息后将自动执行知识检索和辨证分析。</p>
+          )}
 
           <div className="focus-actions">
             <button

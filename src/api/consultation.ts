@@ -25,6 +25,14 @@ export const consultationContextSchema = z.object({
   status: z.enum(['IN_PROGRESS', 'PAUSED', 'COMPLETED', 'CANCELLED']),
   record_version: z.number(),
   analysis_ready: z.boolean(),
+  chief_complaint: nullableString,
+  symptoms: nullableString,
+  tongue: nullableString,
+  pulse: nullableString,
+  symptom_summary: nullableString,
+  possible_syndrome: nullableString,
+  suggestion: nullableString,
+  risk_warning: nullableString,
 })
 
 const conversationSchema = z.object({
@@ -36,19 +44,22 @@ const conversationSchema = z.object({
   consultationContext: consultationContextSchema.nullable().optional(),
   createTime: nullableString,
   updateTime: nullableString,
-}).transform((value) => ({
-  ...value,
-  patientId: value.patientId ?? null,
-  chiefComplaint: value.title,
-  statusName: consultationStatusLabel(value.consultationContext?.status ?? value.status),
-  symptoms: null,
-  tongue: null,
-  pulse: null,
-  symptomSummary: null,
-  possibleSyndrome: null,
-  suggestion: null,
-  riskWarning: null,
-}))
+}).transform((value) => {
+  const context = value.consultationContext ?? null
+  return {
+    ...value,
+    patientId: value.patientId ?? null,
+    chiefComplaint: context?.chief_complaint ?? value.title,
+    statusName: consultationStatusLabel(context?.status ?? value.status),
+    symptoms: context?.symptoms ?? null,
+    tongue: context?.tongue ?? null,
+    pulse: context?.pulse ?? null,
+    symptomSummary: context?.symptom_summary ?? null,
+    possibleSyndrome: context?.possible_syndrome ?? null,
+    suggestion: context?.suggestion ?? null,
+    riskWarning: context?.risk_warning ?? null,
+  }
+})
 
 const tcmFlowTraceItemSchema = z.record(z.string(), z.unknown())
 

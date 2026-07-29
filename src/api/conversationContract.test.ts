@@ -100,4 +100,39 @@ describe('conversation consultation contract', () => {
       expect.objectContaining({ method: 'GET' }),
     )
   })
+
+  it('projects the structured intake and analysis fields into the consultation view', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
+      id: 8,
+      patientId: 123,
+      patientName: '测试患者',
+      title: '晨起咽痛',
+      status: 'ACTIVE',
+      consultationContext: {
+        consultation_record_id: 10,
+        status: 'IN_PROGRESS',
+        record_version: 4,
+        analysis_ready: true,
+        chief_complaint: '晨起喉咙剧痛',
+        symptoms: '喉咙痛、鼻塞、多痰',
+        tongue: null,
+        pulse: null,
+        symptom_summary: '主诉：晨起喉咙剧痛；持续：3天',
+        possible_syndrome: '风热犯肺',
+        suggestion: '基于检索证据的谨慎分析',
+        risk_warning: null,
+      },
+      createTime: '2026-07-29T10:00:00',
+      updateTime: '2026-07-29T10:05:00',
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(getConsultation(8)).resolves.toMatchObject({
+      chiefComplaint: '晨起喉咙剧痛',
+      symptoms: '喉咙痛、鼻塞、多痰',
+      symptomSummary: '主诉：晨起喉咙剧痛；持续：3天',
+      possibleSyndrome: '风热犯肺',
+      suggestion: '基于检索证据的谨慎分析',
+    })
+  })
 })
