@@ -11,8 +11,10 @@ import { useConsultationLifecycle } from "./useConsultationLifecycle";
 import { useConsultationState } from "./useConsultationState";
 import { useConversationSession } from "./useConversationSession";
 import { ConversationStarter } from "./ConversationStarter";
+import { ConsultationStatusPanel } from "./ConsultationStatusPanel";
 
 export type WorkspaceView = "chat" | "summary";
+type PatientPickerPurpose = "suggested" | "manual";
 type ConversationWorkspaceProps = {
   view?: WorkspaceView;
 };
@@ -39,7 +41,7 @@ export function ConversationWorkspace({
   const {
     consultationContext,
     taggedPatient,
-    showTagSuggestion,
+    consultationOfferMessageId,
   } = consultationState;
   const session = useConversationSession({
     taggedPatient,
@@ -49,7 +51,7 @@ export function ConversationWorkspace({
     clearConsultation: consultationState.clear,
     acceptConsultationContext: consultationState.acceptContext,
     onPatientResolved: synchronizeSelectedPatient,
-    onTagSuggestion: consultationState.revealTagSuggestion,
+    onConsultationSuggested: consultationState.revealConsultationOffer,
   });
   const consultationLifecycle = useConsultationLifecycle({
     state: consultationState,
@@ -78,6 +80,8 @@ export function ConversationWorkspace({
 
   const [chiefComplaint, setChiefComplaint] = useState("");
   const [isDraftingConversation, setIsDraftingConversation] = useState(false);
+  const [patientPickerPurpose, setPatientPickerPurpose] =
+    useState<PatientPickerPurpose>("suggested");
   const [, setConsultationError] = useState("");
   const newConversationTokenRef = useRef<string | null>(null);
   const activeView = view;
@@ -147,7 +151,7 @@ export function ConversationWorkspace({
       consultationContext?.status === "CANCELLED"
     ) {
       closePicker();
-      showConsultationError("当前问诊已经结束，请新建对话后再添加问诊标签。");
+      showConsultationError("当前问诊已经结束，请新建对话后再开始问诊。");
       return;
     }
     if (
@@ -157,8 +161,22 @@ export function ConversationWorkspace({
       showConsultationError("当前对话已绑定其他患者，请新建对话后再切换。");
       return;
     }
-    consultationState.attachPatient(patient);
+    synchronizeSelectedPatient(patient);
+    if (patientPickerPurpose === "manual") {
+      consultationState.attachPatient(patient);
+      consultationState.dismissConsultationOffer();
+    }
     closePicker();
+  }
+
+  function openSuggestedPatientPicker() {
+    setPatientPickerPurpose("suggested");
+    openPicker();
+  }
+
+  function openManualConsultationPicker() {
+    setPatientPickerPurpose("manual");
+    openPicker();
   }
 
   function openCreateForm() {
@@ -180,18 +198,22 @@ export function ConversationWorkspace({
 
   function answerWithoutArchive() {
     closePicker();
-    if (
-      activeConversation &&
-      taggedPatient &&
-      consultationContext?.status === "IN_PROGRESS"
-    ) {
-      void consultationLifecycle.pause();
+    if (patientPickerPurpose === "manual") {
+      void handleRemoveManualConsultation();
+      return;
+    }
+    if (!consultationContext) synchronizeSelectedPatient(null);
+  }
+
+  async function handleRemoveManualConsultation() {
+    if (consultationContext?.status === "IN_PROGRESS") {
+      await consultationLifecycle.pause();
       return;
     }
     consultationState.removeLocalTag();
   }
 
-  async function handleStartConsultation() {
+  async function handleStartConversation() {
     const normalizedComplaint = chiefComplaint.trim();
     if (!normalizedComplaint) {
       showConsultationError("请先记录本次主诉，再开始问诊。");
@@ -201,13 +223,50 @@ export function ConversationWorkspace({
     setConsultationError("");
     await session.startConversation({
       initialMessage: normalizedComplaint,
-      selectedPatientId: selectedPatient?.id,
+      selectedPatientId: undefined,
       onCreated: (conversation) => {
         setChiefComplaint("");
         setIsDraftingConversation(false);
         navigate(`/consultation/${conversation.id}`, { replace: true });
       },
     });
+  }
+
+  async function handleStartSuggestedConsultation(sourceComplaint: string) {
+    if (!selectedPatient) {
+      openSuggestedPatientPicker();
+      return;
+    }
+
+    const initialComplaint =
+      sourceComplaint.trim() ||
+      activeConversation?.chiefComplaint?.trim() ||
+      "";
+    const offerMessageId = consultationOfferMessageId;
+    consultationState.attachPatient(selectedPatient);
+    consultationState.dismissConsultationOffer();
+    const started = await session.startConsultation(
+      selectedPatient,
+      "start",
+      initialComplaint,
+    );
+    if (!started) {
+      consultationState.removeLocalTag();
+      if (offerMessageId !== null) {
+        consultationState.revealConsultationOffer(offerMessageId);
+      }
+    }
+  }
+
+  async function handleResumeConsultation() {
+    if (!selectedPatient) {
+      showConsultationError("当前问诊缺少患者信息，暂时无法继续。");
+      return;
+    }
+
+    consultationState.attachPatient(selectedPatient);
+    const resumed = await session.startConsultation(selectedPatient, "resume");
+    if (!resumed) consultationState.removeLocalTag();
   }
 
   async function handleRenameConversation(id: number, title: string) {
@@ -218,11 +277,22 @@ export function ConversationWorkspace({
     if (await session.remove(id)) openNewConsultationDraft();
   }
 
-  const archiveLabel = selectedPatient
-    ? `问诊患者：${selectedPatient.name}`
-    : "选择档案";
   const isConsultationStarter =
     activeView === "chat" && (isDraftingConversation || !activeConversation);
+  const showConsultationStatus =
+    activeView === "chat" &&
+    activeConversation !== null &&
+    consultationContext !== null &&
+    !isDraftingConversation;
+  const isConsultationBusy =
+    isConsultationLoading ||
+    isMessageLoading ||
+    isSendingMessage ||
+    consultationLifecycle.isCompleting ||
+    consultationLifecycle.isControlling;
+  const archiveLabel = taggedPatient
+    ? `问诊患者：${taggedPatient.name}`
+    : "选择问诊患者";
 
   return (
     <section
@@ -235,6 +305,7 @@ export function ConversationWorkspace({
       <section
         className={[
           "workspace-grid",
+          showConsultationStatus ? "with-context consultation-status-layout" : "",
           isConsultationStarter ? "consultation-starter-grid" : "",
         ]
           .filter(Boolean)
@@ -263,9 +334,9 @@ export function ConversationWorkspace({
                   isCreating={isCreatingConversation}
                   taggedPatient={taggedPatient}
                   onChange={setChiefComplaint}
-                  onOpenPatientPicker={openPicker}
+                  onOpenPatientPicker={openManualConsultationPicker}
                   onRemoveTag={consultationState.removeLocalTag}
-                  onSubmit={() => void handleStartConsultation()}
+                  onSubmit={() => void handleStartConversation()}
                 />
               ) : null}
 
@@ -289,19 +360,21 @@ export function ConversationWorkspace({
                   tcmFlowEventsByMessageId={tcmFlowEventsByMessageId}
                   collaborationByMessageId={collaborationByMessageId}
                   taggedPatient={taggedPatient}
+                  suggestedPatient={selectedPatient}
                   consultationContext={consultationContext}
-                  fileRefreshKey={fileRefreshKey}
-                  showTagSuggestion={showTagSuggestion}
-                  isControllingConsultation={consultationLifecycle.isControlling}
-                  onDraftChange={setMessageDraft}
-                  onOpenArchiveSheet={openPicker}
-                  onRemoveTag={consultationLifecycle.pause}
-                  onAddSuggestedTag={() =>
-                    selectedPatient &&
-                    consultationState.attachPatient(selectedPatient)
+                  isControllingConsultation={
+                    consultationLifecycle.isControlling
                   }
-                  onComplete={consultationLifecycle.complete}
-                  onCancel={consultationLifecycle.cancel}
+                  fileRefreshKey={fileRefreshKey}
+                  consultationOfferMessageId={consultationOfferMessageId}
+                  onDraftChange={setMessageDraft}
+                  onOpenArchiveSheet={openSuggestedPatientPicker}
+                  onOpenManualConsultation={openManualConsultationPicker}
+                  onRemoveTag={handleRemoveManualConsultation}
+                  onStartConsultation={handleStartSuggestedConsultation}
+                  onContinueConversation={
+                    consultationState.dismissConsultationOffer
+                  }
                   onCancelRun={session.cancelCurrentRun}
                   onRetryHistory={() => {
                     if (activeConversation) {
@@ -331,11 +404,25 @@ export function ConversationWorkspace({
             </div>
           ) : null}
         </section>
+        {showConsultationStatus ? (
+          <ConsultationStatusPanel
+            conversation={activeConversation}
+            context={consultationContext}
+            patient={selectedPatient}
+            isBusy={isConsultationBusy}
+            onPause={consultationLifecycle.pause}
+            onResume={handleResumeConsultation}
+            onComplete={consultationLifecycle.complete}
+            onCancel={consultationLifecycle.cancel}
+          />
+        ) : null}
       </section>
       <ArchiveSheet
         isOpen={isArchiveSheetOpen}
         patients={patients}
-        selectedPatient={taggedPatient}
+        selectedPatient={
+          patientPickerPurpose === "manual" ? taggedPatient : selectedPatient
+        }
         isLoading={isPatientLoading}
         onClose={closePicker}
         onSelect={selectPatientFromSheet}

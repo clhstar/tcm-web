@@ -527,7 +527,7 @@ final result: passed
 
 ### Comparison evidence
 
-The three annotated header elements—`结构化问诊记录`, the complaint subtitle, and the consultation-status badge—are absent in the implementation. The patient record title, back link, `查看原对话` action, divider, metadata, risk notice, and structured-result cards remain visible. The full-view comparison keeps the affected header region readable, so a separate focused crop was not needed.
+The three annotated header elements—`问诊记录`, the complaint subtitle, and the consultation-status badge—are absent in the implementation. The patient record title, back link, `查看原对话` action, divider, metadata, risk notice, and structured-result cards remain visible. The full-view comparison keeps the affected header region readable, so a separate focused crop was not needed.
 
 ### Required fidelity surfaces
 
@@ -550,5 +550,50 @@ The three annotated header elements—`结构化问诊记录`, the complaint sub
 - DOM verification confirmed the detail header contains only `返回问诊记录`, the patient record title, and `查看原对话`.
 - Browser console contained no warnings or errors.
 - ESLint passed, the production build passed, and 110 tests passed.
+
+final result: passed
+
+## Scoped follow-up: right-aligned send and manual consultation switch
+
+- Source visual truth: `/var/folders/60/_snfm7116mn7djpxc80cfxlw0000gn/T/codex-clipboard-6a2e3ee6-cf2d-4a7f-bf04-7033c4ef2375.png`
+- Normalized source: `artifacts/design-qa/composer-reference-1440x805.png`
+- Implementation screenshot: `artifacts/design-qa/composer-implementation-1440x805.png`
+- Full-view comparison: `artifacts/design-qa/composer-comparison.png`
+- Focused composer comparison: `artifacts/design-qa/composer-focused-comparison.png`
+- Viewport: 1440 × 805 CSS px
+- Source pixels: 2880 × 1610 at inferred 2× density, normalized to 1440 × 805
+- Implementation pixels: 1440 × 805 at 1× density
+- State: desktop new-conversation screen, inactive manual consultation switch
+
+### Findings
+
+No actionable P0, P1, or P2 differences remain for the requested composer change.
+
+- Fonts and typography: existing product font stack, placeholder scale, button label weight, and hierarchy remain consistent with the reference.
+- Spacing and layout rhythm: composer width, height, radius, shadow, and vertical placement match the normalized reference. The send control is now aligned to the right by request.
+- Colors and visual tokens: existing neutral composer colors and accent-soft consultation chip are reused; contrast remains consistent with the application.
+- Image and icon fidelity: the existing Material icon library supplies the add, medical-services, close, and send icons; no replacement artwork was introduced.
+- Copy and content: the restored visible chip reads “问诊”; accessible names clarify “主动开启问诊” and “关闭主动问诊”.
+- Responsiveness: the composer retains its two-column action layout at the mobile breakpoint, with the switch on the left and submit control on the right.
+
+### Interaction Verification
+
+- The “主动开启问诊” control is present in the new-conversation composer.
+- Activating it opens the patient archive dialog.
+- The active patient chip and close action are covered by component and application integration tests.
+- Browser console warnings/errors: none.
+- The live remote patient endpoint was unavailable during visual verification, so patient selection completion was verified through the application integration test instead.
+
+### Comparison History
+
+### Pass 1
+
+- Intentional source change: moved the send control from the annotated left position to the right.
+- Restored the manual “问诊” switch on the left.
+- Full-view and focused comparisons show correct alignment with no remaining P0/P1/P2 layout issues.
+
+### Follow-up Polish
+
+No P3 items required for this scoped change.
 
 final result: passed

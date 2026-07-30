@@ -1,5 +1,6 @@
 import type { ConversationMessage, TcmFlowMessage } from '../../api/conversation'
 import { restoreCollaborationFromTrace, type CollaborationStep } from './collaboration'
+import { consultationMessageKind } from './consultationTimeline'
 
 export type TcmFlowToolEvent = {
   id: string
@@ -16,6 +17,9 @@ export type RestoredTcmFlowHistory = {
   eventsByMessageId: TcmFlowEventsByMessageId
   collaborationByMessageId: Record<number, CollaborationStep[]>
 }
+
+const LEGACY_CONSULTATION_OFFER_MESSAGE =
+  '检测到你正在描述个人不适，建议开始问诊，以便按步骤补充关键信息。'
 
 export function restoreTcmFlowHistory(
   consultationRecordId: number,
@@ -37,6 +41,7 @@ export function restoreTcmFlowHistory(
           consultationRecordId,
           role: 'USER',
           content,
+          displayKind: consultationMessageKind(content),
         })
         pendingEvents = []
         return
@@ -48,6 +53,7 @@ export function restoreTcmFlowHistory(
           consultationRecordId,
           role: 'ASSISTANT',
           content,
+          suggestedAction: restoredSuggestedAction(message, content),
         })
         if (message.agent_trace !== undefined) {
           const collaboration = restoreCollaborationFromTrace(message.agent_trace)
@@ -66,6 +72,7 @@ export function restoreTcmFlowHistory(
         consultationRecordId,
         role: 'USER',
         content,
+        displayKind: consultationMessageKind(content),
       })
       pendingEvents = []
       return
@@ -124,6 +131,7 @@ export function restoreTcmFlowHistory(
         consultationRecordId,
         role: 'ASSISTANT',
         content,
+        suggestedAction: restoredSuggestedAction(message, content),
       })
       if (pendingEvents.length > 0) {
         eventsByMessageId[displayMessageId] = pendingEvents
@@ -137,6 +145,19 @@ export function restoreTcmFlowHistory(
 
 function messageContent(message: TcmFlowMessage) {
   return message.content.trim()
+}
+
+/** 兼容修复前只保存固定提示文本、未保存 suggested_action 的历史消息。 */
+function restoredSuggestedAction(
+  message: TcmFlowMessage,
+  content: string,
+): ConversationMessage['suggestedAction'] {
+  if (message.suggested_action === 'add_consultation_tag') {
+    return message.suggested_action
+  }
+  return content === LEGACY_CONSULTATION_OFFER_MESSAGE
+    ? 'add_consultation_tag'
+    : undefined
 }
 
 function upsertToolEvent(events: TcmFlowToolEvent[], event: TcmFlowToolEvent) {

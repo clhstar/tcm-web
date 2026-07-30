@@ -12,8 +12,8 @@ import {
 /**
  * 问诊在前端的唯一状态源。
  *
- * 这里只管理问诊上下文、输入框患者标签和标签建议；对话、消息和患者列表由各自
- * 的 session/picker 管理。服务端返回较旧的 record_version 时会被忽略。
+ * 这里只管理权威问诊上下文、当前问诊患者和待确认的问诊建议；对话、消息和患者
+ * 列表由各自的 session/picker 管理。服务端返回较旧的 record_version 时会被忽略。
  */
 export function useConsultationState() {
   const [state, setState] = useState<ConversationModeState>(emptyConversationMode)
@@ -52,7 +52,7 @@ export function useConsultationState() {
     setState((current) => ({
       ...current,
       taggedPatient: patient,
-      showTagSuggestion: false,
+      consultationOfferMessageId: null,
     }))
   }
 
@@ -60,23 +60,34 @@ export function useConsultationState() {
     setState((current) => ({
       ...current,
       taggedPatient: null,
-      showTagSuggestion: false,
+      consultationOfferMessageId: null,
     }))
   }
 
-  function revealTagSuggestion() {
-    setState((current) => ({ ...current, showTagSuggestion: true }))
+  function revealConsultationOffer(messageId: number) {
+    setState((current) => ({
+      ...current,
+      consultationOfferMessageId: messageId,
+    }))
+  }
+
+  function dismissConsultationOffer() {
+    setState((current) => ({
+      ...current,
+      consultationOfferMessageId: null,
+    }))
   }
 
   return {
     consultationContext: state.consultationContext,
     taggedPatient: state.taggedPatient,
-    showTagSuggestion: state.showTagSuggestion,
+    consultationOfferMessageId: state.consultationOfferMessageId,
     restore,
     clear,
     acceptContext,
     attachPatient,
     removeLocalTag,
-    revealTagSuggestion,
+    revealConsultationOffer,
+    dismissConsultationOffer,
   }
 }

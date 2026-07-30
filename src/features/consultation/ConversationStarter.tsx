@@ -108,7 +108,7 @@ export function ConversationStarter({
                 <button
                   type="button"
                   className="consultation-tag-remove-button"
-                  aria-label="删除本地问诊标签"
+                  aria-label="关闭主动问诊"
                   onClick={onRemoveTag}
                 >
                   <MaterialIcon name="close" />
@@ -118,7 +118,7 @@ export function ConversationStarter({
               <button
                 type="button"
                 className="archive-consult-chip"
-                aria-label="添加问诊标签"
+                aria-label="主动开启问诊"
                 title={archiveLabel}
                 onClick={onOpenPatientPicker}
               >

@@ -12,7 +12,7 @@ export function ConsultationRecordDetailPage() {
   }
 
   if (consultationQuery.isPending) {
-    return <div className="consultation-record-detail-state" role="status">正在加载结构化问诊结果...</div>
+    return <div className="consultation-record-detail-state" role="status">正在加载问诊结果...</div>
   }
 
   if (consultationQuery.isError) {
@@ -27,7 +27,7 @@ export function ConsultationRecordDetailPage() {
 
   const consultation = consultationQuery.data
   if (!consultation.consultationContext) {
-    return <RecordState title="这不是一条结构化问诊记录" message="该对话没有问诊标签，因此没有结构化结果。" />
+    return <RecordState title="这不是一条问诊记录" message="该对话尚未开始问诊，因此没有结构化结果。" />
   }
 
   return <ConsultationRecordDetail consultation={consultation} />

@@ -20,6 +20,7 @@ import {
 import { isRecord, readRootStreamPayload } from '../../../api/langGraphStream'
 import { readPublicResponse } from '../nativeStream'
 import { restoreTcmFlowHistory } from '../tcmFlowHistory'
+import { consultationMessageKind } from '../consultationTimeline'
 import {
   consultationStreamReducer,
   initialConsultationStreamState,
@@ -37,7 +38,7 @@ type SendConsultationMessageInput = {
   replaceMessages?: boolean
   patientId?: number
   onConsultationContext?: (context: ConsultationContext) => void
-  onSuggestedAction?: () => void
+  onSuggestedAction?: (assistantMessageId: number) => void
   onConversationTitle?: (title: string) => void
   onRunSettled?: () => void | Promise<void>
 }
@@ -390,7 +391,9 @@ function handleStreamEvent(
       messageId: assistantMessageId,
       content: publicResponse.assistantMessage,
     })
-    if (publicResponse.suggestedAction === 'add_consultation_tag') callbacks.onSuggestedAction?.()
+    if (publicResponse.suggestedAction === 'add_consultation_tag') {
+      callbacks.onSuggestedAction?.(assistantMessageId)
+    }
     dispatch({ type: 'lifecycle', lifecycle: 'completed' })
   }
 }
@@ -425,6 +428,8 @@ function createLocalMessage(
     consultationRecordId,
     role,
     content,
+    displayKind:
+      role === 'USER' ? consultationMessageKind(content) : 'MESSAGE',
     createTime: new Date().toISOString(),
   }
 }

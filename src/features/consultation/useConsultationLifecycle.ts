@@ -33,7 +33,7 @@ export function useConsultationLifecycle({
 
   async function pause() {
     const conversation = session.conversation
-    if (!conversation || !state.taggedPatient || isControlling) return
+    if (!conversation || isControlling) return
     if (
       !state.consultationContext ||
       state.consultationContext.status !== 'IN_PROGRESS'
@@ -49,11 +49,11 @@ export function useConsultationLifecycle({
       notify({
         type: 'success',
         title: '问诊已暂停',
-        message: '可继续发送普通消息，重新添加同一患者标签即可恢复。',
+        message: '已保存当前采集进度，可随时从状态面板继续问诊。',
       })
     } catch (error) {
       showError(
-        error instanceof Error ? error.message : '暂停失败，问诊标签已保留。',
+        error instanceof Error ? error.message : '暂停失败，问诊仍保持进行中。',
       )
     } finally {
       setIsControlling(false)

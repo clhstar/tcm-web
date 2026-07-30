@@ -10,6 +10,10 @@ import {
   isContextForActiveConversation,
   messagePatientId,
 } from './conversationMode'
+import {
+  buildConsultationStartMessage,
+  CONSULTATION_RESUME_MESSAGE,
+} from './consultationTimeline'
 import type { useConsultationStream } from './stream/useConsultationStream'
 import type { useConversationOperationGate } from './useConversationOperationGate'
 
@@ -34,7 +38,7 @@ type UseConversationMessagingInput = {
     context: ConsultationContext,
     patient: Patient | null,
   ) => void
-  onTagSuggestion: () => void
+  onConsultationSuggested: (assistantMessageId: number) => void
   refreshConversation: (conversationId: number) => Promise<void>
 }
 
@@ -50,7 +54,7 @@ export function useConversationMessaging({
   stream,
   operationGate,
   synchronizeConsultationContext,
-  onTagSuggestion,
+  onConsultationSuggested,
   refreshConversation,
 }: UseConversationMessagingInput) {
   const queryClient = useQueryClient()
@@ -137,7 +141,7 @@ export function useConversationMessaging({
           }
           synchronizeConsultationContext(context, messageTag)
         },
-        onSuggestedAction: onTagSuggestion,
+        onSuggestedAction: onConsultationSuggested,
         onConversationTitle: (title) => {
           if (
             !isContextForActiveConversation(
@@ -172,6 +176,37 @@ export function useConversationMessaging({
           ? error.message
           : '停止任务失败，请稍后重试。',
       )
+    }
+  }
+
+  async function startConsultation(
+    patient: Patient,
+    mode: 'start' | 'resume' = 'start',
+    initialComplaint = '',
+  ) {
+    if (
+      !conversation ||
+      activeConversationIdRef.current !== conversation.id ||
+      isLoading() ||
+      stream.isRunBlocking ||
+      operationGate.isLocked()
+    ) {
+      return false
+    }
+
+    try {
+      return await runChat(
+        conversation,
+        mode === 'resume'
+          ? CONSULTATION_RESUME_MESSAGE
+          : buildConsultationStartMessage(initialComplaint),
+        { taggedPatient: patient },
+      )
+    } catch {
+      if (activeConversationIdRef.current === conversation.id) {
+        showError(FALLBACK_CONVERSATION_ERROR)
+      }
+      return false
     }
   }
 
@@ -223,6 +258,7 @@ export function useConversationMessaging({
     runId: stream.runId,
     runStatus: stream.runStatus,
     sendMessage,
+    startConsultation,
     runChat,
     cancelCurrentRun,
     resumeCurrentRun,

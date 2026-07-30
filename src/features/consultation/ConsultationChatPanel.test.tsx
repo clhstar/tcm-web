@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Conversation, ConversationRunStatus } from '../../api/conversation'
+import { buildConsultationStartMessage } from './consultationTimeline'
 
 const consultationApi = vi.hoisted(() => ({
   listFiles: vi.fn(),
@@ -59,7 +60,7 @@ function props(overrides: Record<string, unknown> = {}) {
     consultation,
     messages: [],
     draft: '',
-    archiveLabel: '选择档案',
+    archiveLabel: '选择问诊患者',
     errorMessage: '',
     isLoading: false,
     isSending: false,
@@ -70,15 +71,16 @@ function props(overrides: Record<string, unknown> = {}) {
     tcmFlowEventsByMessageId: {},
     collaborationByMessageId: {},
     taggedPatient: null,
+    suggestedPatient: null,
     consultationContext: null,
-    showTagSuggestion: false,
     isControllingConsultation: false,
+    consultationOfferMessageId: null,
     onDraftChange: vi.fn(),
     onOpenArchiveSheet: vi.fn(),
+    onOpenManualConsultation: vi.fn(),
     onRemoveTag: vi.fn().mockResolvedValue(undefined),
-    onAddSuggestedTag: vi.fn(),
-    onComplete: vi.fn().mockResolvedValue(undefined),
-    onCancel: vi.fn().mockResolvedValue(undefined),
+    onStartConsultation: vi.fn().mockResolvedValue(undefined),
+    onContinueConversation: vi.fn(),
     onCancelRun: vi.fn().mockResolvedValue(undefined),
     onRetryHistory: vi.fn(),
     onResumeRun: vi.fn().mockResolvedValue(undefined),
@@ -237,10 +239,97 @@ describe('ConsultationChatPanel run governance', () => {
     expect(onSend).toHaveBeenCalledTimes(1)
   })
 
-  it('opens patient selection from the consultation tag and keeps removal separate', async () => {
+  it('offers the current patient after the assistant suggests consultation', async () => {
     const onOpenArchiveSheet = vi.fn()
-    const onRemoveTag = vi.fn().mockResolvedValue(undefined)
+    const onStartConsultation = vi.fn().mockResolvedValue(undefined)
+    const onContinueConversation = vi.fn()
     render(
+      <ConsultationChatPanel
+        {...props({
+          messages: [
+            {
+              id: 16,
+              consultationRecordId: 1,
+              role: 'USER',
+              content: '早上起床喉咙痛',
+            },
+            {
+              id: 17,
+              consultationRecordId: 1,
+              role: 'ASSISTANT',
+              content: '建议进一步了解你的症状。',
+            },
+          ],
+          suggestedPatient: {
+            id: 11,
+            name: '张三',
+            phone: '13800138000',
+            gender: 'MALE',
+          },
+          consultationOfferMessageId: 17,
+          onOpenArchiveSheet,
+          onStartConsultation,
+          onContinueConversation,
+        })}
+      />,
+    )
+
+    expect(screen.getByLabelText('是否开始问诊')).toBeInTheDocument()
+    expect(screen.queryByText('建议进一步了解你的症状。')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: '切换问诊患者，当前张三' }))
+    expect(onOpenArchiveSheet).toHaveBeenCalledTimes(1)
+    await userEvent.click(screen.getByRole('button', { name: '开始问诊' }))
+    expect(onStartConsultation).toHaveBeenCalledWith('早上起床喉咙痛')
+    expect(screen.queryByLabelText('是否开始问诊')).not.toBeInTheDocument()
+    expect(onContinueConversation).not.toHaveBeenCalled()
+  })
+
+  it('restores the offer card from persisted message metadata after switching conversations', () => {
+    render(
+      <ConsultationChatPanel
+        {...props({
+          messages: [
+            {
+              id: 1,
+              consultationRecordId: 1,
+              role: 'USER',
+              content: '最近饭后胃胀',
+            },
+            {
+              id: 2,
+              consultationRecordId: 1,
+              role: 'ASSISTANT',
+              content: '检测到你正在描述个人不适，建议开始问诊。',
+              suggestedAction: 'add_consultation_tag',
+            },
+          ],
+          consultationOfferMessageId: null,
+        })}
+      />,
+    )
+
+    expect(screen.getByLabelText('是否开始问诊')).toBeInTheDocument()
+    expect(
+      screen.queryByText('检测到你正在描述个人不适，建议开始问诊。'),
+    ).not.toBeInTheDocument()
+  })
+
+  it('keeps the manual consultation switch in the conversation composer', async () => {
+    const onOpenManualConsultation = vi.fn()
+    const onRemoveTag = vi.fn().mockResolvedValue(undefined)
+    const { rerender } = render(
+      <ConsultationChatPanel
+        {...props({
+          onOpenManualConsultation,
+          onRemoveTag,
+        })}
+      />,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: '主动开启问诊' }))
+    expect(onOpenManualConsultation).toHaveBeenCalledTimes(1)
+
+    rerender(
       <ConsultationChatPanel
         {...props({
           taggedPatient: {
@@ -249,19 +338,36 @@ describe('ConsultationChatPanel run governance', () => {
             phone: '13800138000',
             gender: 'MALE',
           },
-          onOpenArchiveSheet,
+          onOpenManualConsultation,
           onRemoveTag,
         })}
       />,
     )
-
-    await userEvent.click(screen.getByRole('button', { name: '切换问诊患者，当前张三' }))
-    expect(onOpenArchiveSheet).toHaveBeenCalledTimes(1)
-    expect(onRemoveTag).not.toHaveBeenCalled()
-
-    const removeButton = screen.getByRole('button', { name: '删除问诊标签并暂停问诊' })
-    expect(removeButton.querySelector('.material-icon')).not.toBeNull()
-    await userEvent.click(removeButton)
+    await userEvent.click(screen.getByRole('button', { name: '关闭主动问诊' }))
     expect(onRemoveTag).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders a persisted consultation action as a timeline node', () => {
+    render(
+      <ConsultationChatPanel
+        {...props({
+          messages: [{
+            id: 18,
+            consultationRecordId: 1,
+            role: 'USER',
+            content: buildConsultationStartMessage('早上起床喉咙痛'),
+          }],
+          consultationContext: {
+            consultation_record_id: 9,
+            status: 'IN_PROGRESS',
+            record_version: 1,
+            analysis_ready: false,
+          },
+        })}
+      />,
+    )
+
+    expect(screen.getByLabelText('问诊已开始')).toBeInTheDocument()
+    expect(screen.queryByText('本次主诉原文：早上起床喉咙痛')).not.toBeInTheDocument()
   })
 })

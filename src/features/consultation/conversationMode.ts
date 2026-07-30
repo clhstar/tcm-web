@@ -7,10 +7,10 @@ export type ComposerMode = 'CHAT' | 'CONSULTATION'
 export type ConversationModeState = {
   consultationContext: ConsultationContext | null
   taggedPatient: Patient | null
-  showTagSuggestion: boolean
+  consultationOfferMessageId: number | null
 }
 
-/** 当前消息只有显式携带患者问诊标签时才按问诊发送。 */
+/** 只有已确认开始且绑定患者的消息才按问诊发送。 */
 export function composerMode(taggedPatient: Patient | null): ComposerMode {
   return taggedPatient ? 'CONSULTATION' : 'CHAT'
 }
@@ -35,7 +35,7 @@ export function isContextForActiveConversation(
 }
 
 /**
- * 恢复持久化问诊上下文，但不为已暂停或已结束的问诊重新添加输入框标签。
+ * 恢复持久化问诊上下文，但不让已暂停或已结束的问诊继续采集。
  */
 export function restoreConversationMode(
   conversation: Conversation,
@@ -49,7 +49,11 @@ export function restoreConversationMode(
       ? patient
       : null
 
-  return { consultationContext, taggedPatient, showTagSuggestion: false }
+  return {
+    consultationContext,
+    taggedPatient,
+    consultationOfferMessageId: null,
+  }
 }
 
 /** 应用流或问诊控制接口返回的权威状态。 */
@@ -60,11 +64,15 @@ export function applyConsultationContext(
   return {
     consultationContext,
     taggedPatient: consultationContext.status === 'IN_PROGRESS' ? taggedPatient : null,
-    showTagSuggestion: false,
+    consultationOfferMessageId: null,
   }
 }
 
 /** 新对话不会继承上一条对话的问诊模式。 */
 export function emptyConversationMode(): ConversationModeState {
-  return { consultationContext: null, taggedPatient: null, showTagSuggestion: false }
+  return {
+    consultationContext: null,
+    taggedPatient: null,
+    consultationOfferMessageId: null,
+  }
 }

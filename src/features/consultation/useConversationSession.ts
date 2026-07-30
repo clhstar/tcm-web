@@ -30,7 +30,7 @@ type UseConversationSessionInput = {
     patient: Patient | null,
   ) => boolean
   onPatientResolved: (patient: Patient | null) => void
-  onTagSuggestion: () => void
+  onConsultationSuggested: (assistantMessageId: number) => void
 }
 
 /**
@@ -47,7 +47,7 @@ export function useConversationSession({
   clearConsultation,
   acceptConsultationContext,
   onPatientResolved,
-  onTagSuggestion,
+  onConsultationSuggested,
 }: UseConversationSessionInput) {
   const stream = useConsultationStream()
   const operationGate = useConversationOperationGate()
@@ -92,7 +92,7 @@ export function useConversationSession({
     stream,
     operationGate,
     synchronizeConsultationContext: consultationSync.synchronize,
-    onTagSuggestion,
+    onConsultationSuggested,
     refreshConversation: loader.refresh,
   })
 
@@ -147,6 +147,7 @@ export function useConversationSession({
     resetDraft,
     startConversation: actions.startConversation,
     sendMessage: messaging.sendMessage,
+    startConsultation: messaging.startConsultation,
     cancelCurrentRun: messaging.cancelCurrentRun,
     resumeCurrentRun: messaging.resumeCurrentRun,
     retryCurrentRun: messaging.retryCurrentRun,

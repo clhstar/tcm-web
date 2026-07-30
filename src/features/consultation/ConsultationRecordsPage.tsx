@@ -58,7 +58,7 @@ function ConsultationRecordRow({ consultation }: { consultation: Conversation })
     <Link
       className="consultation-record-row"
       to={`/consultation-records/${consultation.id}`}
-      aria-label={`查看${patientName}的结构化问诊结果：${title}`}
+      aria-label={`查看${patientName}的问诊结果：${title}`}
     >
       <span className="consultation-record-primary">
         <span className="consultation-record-avatar" aria-hidden="true">{patientName.slice(0, 1)}</span>

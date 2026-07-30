@@ -24,6 +24,28 @@
     position: static;
   }
 
+  .consultation-status-layout {
+    height: auto;
+  }
+
+  .consultation-status-layout > .single-module-panel {
+    grid-row: 2;
+    border-right: 0;
+  }
+
+  .consultation-status-layout > .consultation-status-panel {
+    grid-row: 1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 12px 16px 0;
+    border: 1px solid var(--app-border);
+    border-radius: 16px;
+  }
+
+  .consultation-status-layout .consultation-status-actions,
+  .consultation-status-layout .consultation-status-risk {
+    grid-column: 1 / -1;
+  }
+
   .mobile-nav {
     position: fixed;
     left: 14px;
@@ -177,6 +199,17 @@
 
   .patient-context-panel {
     display: none;
+  }
+
+  .consultation-status-layout > .consultation-status-panel {
+    display: grid;
+    grid-template-columns: 1fr;
+    margin-inline: 10px;
+  }
+
+  .consultation-status-layout .consultation-status-actions,
+  .consultation-status-layout .consultation-status-risk {
+    grid-column: auto;
   }
 
   .topbar-actions {

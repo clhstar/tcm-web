@@ -75,7 +75,7 @@ describe('conversation mode contract', () => {
     expect(restoreConversationMode(conversation(inProgress), patient)).toEqual({
       consultationContext: inProgress,
       taggedPatient: patient,
-      showTagSuggestion: false,
+      consultationOfferMessageId: null,
     })
   })
 
@@ -85,7 +85,7 @@ describe('conversation mode contract', () => {
     expect(restoreConversationMode(conversation(paused), patient)).toEqual({
       consultationContext: paused,
       taggedPatient: null,
-      showTagSuggestion: false,
+      consultationOfferMessageId: null,
     })
   })
 
@@ -93,7 +93,7 @@ describe('conversation mode contract', () => {
     expect(restoreConversationMode(conversation(null, null), null)).toEqual({
       consultationContext: null,
       taggedPatient: null,
-      showTagSuggestion: false,
+      consultationOfferMessageId: null,
     })
   })
 
@@ -105,7 +105,7 @@ describe('conversation mode contract', () => {
       expect(applyConsultationContext(terminalContext, patient)).toEqual({
         consultationContext: terminalContext,
         taggedPatient: null,
-        showTagSuggestion: false,
+        consultationOfferMessageId: null,
       })
     },
   )
@@ -114,7 +114,7 @@ describe('conversation mode contract', () => {
     expect(emptyConversationMode()).toEqual({
       consultationContext: null,
       taggedPatient: null,
-      showTagSuggestion: false,
+      consultationOfferMessageId: null,
     })
   })
 

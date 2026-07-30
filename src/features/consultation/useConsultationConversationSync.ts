@@ -16,7 +16,7 @@ type UseConsultationConversationSyncInput = {
   onPatientResolved: (patient: Patient | null) => void
 }
 
-/** 将结构化问诊结果同步到问诊状态和当前对话摘要。 */
+/** 将问诊结果同步到问诊状态和当前对话摘要。 */
 export function useConsultationConversationSync({
   activeConversationIdRef,
   setConversation,

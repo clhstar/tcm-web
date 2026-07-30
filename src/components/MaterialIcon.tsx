@@ -25,6 +25,7 @@ import medicalServicesIcon from '@material-design-icons/svg/outlined/medical_ser
 import moreHorizIcon from '@material-design-icons/svg/outlined/more_horiz.svg?raw'
 import personIcon from '@material-design-icons/svg/outlined/person.svg?raw'
 import personAddIcon from '@material-design-icons/svg/outlined/person_add.svg?raw'
+import radioButtonUncheckedIcon from '@material-design-icons/svg/outlined/radio_button_unchecked.svg?raw'
 import saveIcon from '@material-design-icons/svg/outlined/save.svg?raw'
 import searchIcon from '@material-design-icons/svg/outlined/search.svg?raw'
 import sendIcon from '@material-design-icons/svg/outlined/send.svg?raw'
@@ -34,6 +35,7 @@ import summarizeIcon from '@material-design-icons/svg/outlined/summarize.svg?raw
 import swapHorizIcon from '@material-design-icons/svg/outlined/swap_horiz.svg?raw'
 import visibilityIcon from '@material-design-icons/svg/outlined/visibility.svg?raw'
 import systemUpdateAltIcon from '@material-design-icons/svg/outlined/system_update_alt.svg?raw'
+import warningIcon from '@material-design-icons/svg/outlined/warning_amber.svg?raw'
 
 const iconSources = {
   accountCircle: accountCircleIcon,
@@ -63,6 +65,7 @@ const iconSources = {
   moreHoriz: moreHorizIcon,
   person: personIcon,
   personAdd: personAddIcon,
+  radioButtonUnchecked: radioButtonUncheckedIcon,
   save: saveIcon,
   search: searchIcon,
   send: sendIcon,
@@ -72,6 +75,7 @@ const iconSources = {
   swapHoriz: swapHorizIcon,
   visibility: visibilityIcon,
   systemUpdateAlt: systemUpdateAltIcon,
+  warning: warningIcon,
 } as const
 
 export type MaterialIconName = keyof typeof iconSources

@@ -70,6 +70,7 @@ const tcmFlowMessageSchema = z
     role: z.enum(['user', 'assistant', 'system']).optional(),
     content: z.string(),
     run_id: z.string().nullable().optional(),
+    suggested_action: z.enum(['add_consultation_tag']).optional(),
     agent_trace: z.array(tcmFlowTraceItemSchema).optional(),
     name: nullableString,
     tool_calls: z.array(z.record(z.string(), z.unknown())).nullable().optional(),
@@ -172,6 +173,8 @@ export type ConsultationMessage = {
   role: string
   content: string
   createTime?: string | null
+  displayKind?: 'MESSAGE' | 'CONSULTATION_START' | 'CONSULTATION_RESUME'
+  suggestedAction?: 'add_consultation_tag'
 }
 export type TcmFlowMessage = z.infer<typeof tcmFlowMessageSchema>
 export type ConsultationPage = z.infer<typeof consultationPageSchema>

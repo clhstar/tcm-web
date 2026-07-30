@@ -2,6 +2,34 @@ import { describe, expect, it } from 'vitest'
 import { restoreTcmFlowHistory } from './tcmFlowHistory'
 
 describe('restoreTcmFlowHistory', () => {
+  it('restores a persisted consultation offer as message metadata', () => {
+    const restored = restoreTcmFlowHistory(101, [
+      { role: 'user', content: '最近饭后胃胀' },
+      {
+        role: 'assistant',
+        content: '检测到你正在描述个人不适，建议开始问诊。',
+        suggested_action: 'add_consultation_tag',
+      },
+    ])
+
+    expect(restored.messages[1]).toMatchObject({
+      role: 'ASSISTANT',
+      suggestedAction: 'add_consultation_tag',
+    })
+  })
+
+  it('restores consultation offers saved before suggested action persistence', () => {
+    const restored = restoreTcmFlowHistory(101, [
+      { role: 'user', content: '最近饭后胃胀' },
+      {
+        role: 'assistant',
+        content: '检测到你正在描述个人不适，建议开始问诊，以便按步骤补充关键信息。',
+      },
+    ])
+
+    expect(restored.messages[1].suggestedAction).toBe('add_consultation_tag')
+  })
+
   it('leaves clarification resume selection to the server checkpoint', () => {
     const restored = restoreTcmFlowHistory(101, [
       { role: 'assistant', content: 'Earlier question', run_id: 'run-old', status: 'need_clarification' },

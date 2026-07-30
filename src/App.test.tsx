@@ -2,6 +2,10 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
+import {
+  buildConsultationStartMessage,
+  CONSULTATION_RESUME_MESSAGE,
+} from './features/consultation/consultationTimeline'
 
 const authResponse = {
   code: 200,
@@ -128,6 +132,7 @@ const activeConversation: ConversationDto = {
 type FetchRouterOptions = {
   conversationPage?: ConversationPageResponse
   failConversationId?: number
+  messagesByConversationId?: Record<number, Array<Record<string, unknown>>>
   refreshStatus?: number
   unauthorizedMessagesForId?: number
 }
@@ -197,19 +202,43 @@ function installFetchRouter(options: FetchRouterOptions = {}) {
       return jsonResponse({ code: 200, message: 'success', data: createdConversation })
     }
     if (method === 'POST' && url.pathname === `/api/conversations/${createdConversation.id}/runs/stream`) {
+      const requestBody = JSON.parse(String(init.body)) as {
+        content: string
+        consultationContext?: { patientId: number }
+      }
+      const isStartingConsultation =
+        requestBody.consultationContext?.patientId === patient.id
       return sseResponse([
         {
           event: 'metadata',
           data: { run_id: 'run-101', thread_id: 'thread-101', assistant_id: 'tcm_agent' },
         },
+        ...(isStartingConsultation
+          ? [{
+              event: 'consultation_context',
+              data: {
+                consultation_record_id: 902,
+                status: 'IN_PROGRESS',
+                record_version: 1,
+                analysis_ready: false,
+                chief_complaint: '最近饭后胃胀',
+                symptoms: '饭后胃胀',
+              },
+            }]
+          : []),
         {
           event: 'values',
           data: {
             public_response: {
               status: 'completed',
-              assistant_message: '已收到，我会先按普通对话回答。',
+              assistant_message: isStartingConsultation
+                ? '问诊已经开始，请问症状持续多久了？'
+                : '检测到你正在描述个人不适，建议开始问诊，以便按步骤补充关键信息。',
               pending_clarification: [],
               references: [],
+              ...(isStartingConsultation
+                ? {}
+                : { suggested_action: 'add_consultation_tag' }),
             },
           },
         },
@@ -218,11 +247,27 @@ function installFetchRouter(options: FetchRouterOptions = {}) {
     }
     const streamMatch = url.pathname.match(/^\/api\/conversations\/(\d+)\/runs\/stream$/)
     if (method === 'POST' && streamMatch) {
+      const requestBody = JSON.parse(String(init.body)) as {
+        content: string
+        consultationContext?: { patientId: number }
+      }
+      const resumesConsultation =
+        requestBody.consultationContext?.patientId === patient.id
       return sseResponse([
         {
           event: 'metadata',
           data: { run_id: `run-${streamMatch[1]}`, thread_id: `thread-${streamMatch[1]}`, assistant_id: 'tcm_agent' },
         },
+        ...(resumesConsultation
+          ? [{
+              event: 'consultation_context',
+              data: {
+                ...activeConversation.consultationContext,
+                status: 'IN_PROGRESS',
+                record_version: 6,
+              },
+            }]
+          : []),
         {
           event: 'values',
           data: {
@@ -242,7 +287,11 @@ function installFetchRouter(options: FetchRouterOptions = {}) {
       if (Number(messageMatch[1]) === options.unauthorizedMessagesForId) {
         return jsonResponse({ code: 401, message: 'Unauthorized', data: null }, 401)
       }
-      return jsonResponse({ code: 200, message: 'success', data: [] })
+      return jsonResponse({
+        code: 200,
+        message: 'success',
+        data: options.messagesByConversationId?.[Number(messageMatch[1])] ?? [],
+      })
     }
     const completeMatch = url.pathname.match(/^\/api\/conversations\/(\d+)\/consultation\/complete$/)
     if (method === 'POST' && completeMatch) {
@@ -414,8 +463,9 @@ describe('App routes and consultation entry', () => {
     expect(screen.getByRole('button', { name: '开始中医问诊' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '解读检查报告' }))
     expect(messageInput).toHaveValue('我想了解一份检查报告，请告诉我需要提供哪些指标和背景信息。')
-    expect(screen.getByRole('button', { name: '添加问诊标签' })).toBeInTheDocument()
-    expect(screen.queryByRole('complementary', { name: '患者和问诊信息' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('complementary', { name: '问诊状态' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('是否开始问诊')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '主动开启问诊' })).toBeInTheDocument()
 
     const patientRequest = findRequest(fetchMock, 'GET', '/api/patient')
     const conversationRequest = findRequest(fetchMock, 'GET', '/api/conversations/page')
@@ -461,14 +511,14 @@ describe('App routes and consultation entry', () => {
     expect(window.location.pathname).toBe('/consultation-records')
 
     await user.click(within(savedRecords).getByRole('link', {
-      name: '查看张三的结构化问诊结果：新对话',
+      name: '查看张三的问诊结果：新对话',
     }))
 
     const detailHeading = await screen.findByRole('heading', { name: '张三的问诊记录', level: 2 })
     expect(detailHeading).toBeInTheDocument()
     const detailHeader = detailHeading.closest('.consultation-record-detail-header')
     expect(detailHeader).not.toBeNull()
-    expect(within(detailHeader as HTMLElement).queryByText('结构化问诊记录')).not.toBeInTheDocument()
+    expect(within(detailHeader as HTMLElement).queryByText('问诊记录')).not.toBeInTheDocument()
     expect(within(detailHeader as HTMLElement).queryByText('新对话')).not.toBeInTheDocument()
     expect(within(detailHeader as HTMLElement).queryByText('已完成')).not.toBeInTheDocument()
     expect(screen.getByText('饭后胃胀反复三周，伴嗳气和食欲下降。')).toBeInTheDocument()
@@ -602,25 +652,7 @@ describe('App routes and consultation entry', () => {
     expect(window.location.pathname).toBe('/patients')
   })
 
-  it('adds and removes the explicit consultation tag locally without changing backend state', async () => {
-    const fetchMock = installFetchRouter()
-    const user = userEvent.setup()
-    render(<App />)
-
-    await loginThroughUi(user)
-    await user.click(await screen.findByRole('button', { name: '添加问诊标签' }))
-
-    const archiveDialog = screen.getByRole('dialog', { name: '选择档案' })
-    await user.click(within(archiveDialog).getByRole('button', { name: '选择' }))
-
-    expect(screen.getByText('问诊·张三')).toBeInTheDocument()
-    expect(findRequest(fetchMock, 'POST', '/api/conversations')).toBeUndefined()
-    await user.click(screen.getByRole('button', { name: '删除本地问诊标签' }))
-    expect(screen.getByRole('button', { name: '添加问诊标签' })).toBeInTheDocument()
-    expect(findRequest(fetchMock, 'POST', '/api/conversations')).toBeUndefined()
-  })
-
-  it('starts an untagged conversation through the new conversation stream contract', async () => {
+  it('keeps a detected symptom in ordinary conversation until the user confirms consultation', async () => {
     const fetchMock = installFetchRouter()
     const user = userEvent.setup()
     render(<App />)
@@ -630,7 +662,16 @@ describe('App routes and consultation entry', () => {
     await user.type(messageInput, '最近饭后胃胀')
     fireEvent.keyDown(messageInput, { key: 'Enter' })
 
-    expect(await screen.findByText('已收到，我会先按普通对话回答。')).toBeInTheDocument()
+    expect(await screen.findByLabelText('是否开始问诊')).toBeInTheDocument()
+    expect(
+      screen.queryByText('检测到你正在描述个人不适，建议开始问诊，以便按步骤补充关键信息。'),
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '切换问诊患者，当前张三' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '开始问诊' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '继续对话' })).toBeInTheDocument()
+    expect(screen.queryByRole('complementary', { name: '问诊状态' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '继续对话' }))
+    expect(screen.queryByLabelText('是否开始问诊')).not.toBeInTheDocument()
     const createRequest = findRequest(fetchMock, 'POST', '/api/conversations')
     const streamRequest = findRequest(
       fetchMock,
@@ -643,31 +684,117 @@ describe('App routes and consultation entry', () => {
     }))
   })
 
-  it('uses the explicit patient tag for the first consultation message', async () => {
+  it('restores the consultation offer card after switching away and back', async () => {
+    const symptomConversation = {
+      ...createdConversation,
+      id: 111,
+      title: '饭后胃胀',
+    }
+    const knowledgeConversation = {
+      ...createdConversation,
+      id: 112,
+      title: '中医知识',
+    }
+    installFetchRouter({
+      conversationPage: {
+        ...emptyConversationPageResponse,
+        data: {
+          ...emptyConversationPageResponse.data,
+          total: 2,
+          records: [symptomConversation, knowledgeConversation],
+        },
+      },
+      messagesByConversationId: {
+        [symptomConversation.id]: [
+          { role: 'user', content: '最近饭后胃胀' },
+          {
+            role: 'assistant',
+            content: '检测到你正在描述个人不适，建议开始问诊，以便按步骤补充关键信息。',
+            suggested_action: 'add_consultation_tag',
+          },
+        ],
+        [knowledgeConversation.id]: [
+          { role: 'user', content: '什么是气虚？' },
+          { role: 'assistant', content: '气虚是中医的一类证候描述。' },
+        ],
+      },
+    })
+    const user = userEvent.setup()
+    render(<App />)
+
+    await loginThroughUi(user)
+    expect(await screen.findByLabelText('是否开始问诊')).toBeInTheDocument()
+
+    const sidebar = screen.getByRole('complementary', { name: '主菜单' })
+    await user.click(within(sidebar).getByRole('link', { name: '打开对话：中医知识' }))
+    expect(await screen.findByText('气虚是中医的一类证候描述。')).toBeInTheDocument()
+    expect(screen.queryByLabelText('是否开始问诊')).not.toBeInTheDocument()
+
+    await user.click(within(sidebar).getByRole('link', { name: '打开对话：饭后胃胀' }))
+    expect(await screen.findByLabelText('是否开始问诊')).toBeInTheDocument()
+    expect(
+      screen.queryByText('检测到你正在描述个人不适，建议开始问诊，以便按步骤补充关键信息。'),
+    ).not.toBeInTheDocument()
+  })
+
+  it('starts consultation directly from the composer switch', async () => {
     const fetchMock = installFetchRouter()
     const user = userEvent.setup()
     render(<App />)
 
     await loginThroughUi(user)
-    await user.click(await screen.findByRole('button', { name: '添加问诊标签' }))
-    await user.click(within(screen.getByRole('dialog', { name: '选择档案' })).getByRole('button', { name: '选择' }))
-    expect(screen.queryByRole('complementary', { name: '患者和问诊信息' })).not.toBeInTheDocument()
+    await user.click(await screen.findByRole('button', { name: '主动开启问诊' }))
+    const archiveDialog = screen.getByRole('dialog', { name: '选择档案' })
+    await user.click(within(archiveDialog).getByRole('button', { name: '选择' }))
+
+    expect(screen.getByText('问诊·张三')).toBeInTheDocument()
+    await user.type(
+      screen.getByRole('textbox', { name: '患者主诉' }),
+      '早上起床喉咙痛',
+    )
+    await user.click(screen.getByRole('button', { name: '开始问诊' }))
+
+    expect(await screen.findByRole('complementary', { name: '问诊状态' })).toBeInTheDocument()
+    const streamRequests = fetchMock.mock.calls.filter(([input, init]) => {
+      const url = new URL(String(input), 'http://localhost')
+      return url.pathname === `/api/conversations/${createdConversation.id}/runs/stream` &&
+        ((init as RequestInit | undefined)?.method ?? 'GET') === 'POST'
+    })
+    expect(streamRequests.at(-1)?.[1]).toEqual(expect.objectContaining({
+      body: JSON.stringify({
+        content: '早上起床喉咙痛',
+        consultationContext: { patientId: patient.id },
+      }),
+    }))
+  })
+
+  it('starts consultation from the assistant offer and persists a timeline node', async () => {
+    const fetchMock = installFetchRouter()
+    const user = userEvent.setup()
+    render(<App />)
+
+    await loginThroughUi(user)
+    await user.type(screen.getByRole('textbox', { name: '消息' }), '最近饭后胃胀')
+    await user.click(screen.getByRole('button', { name: '发送消息' }))
+
+    expect(await screen.findByLabelText('是否开始问诊')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '切换问诊患者，当前张三' }))
     expect(screen.getByRole('dialog', { name: '选择档案' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '关闭选择档案' }))
-    expect(screen.getByRole('button', { name: '删除本地问诊标签' }).querySelector('.material-icon')).not.toBeNull()
-    await user.type(screen.getByRole('textbox', { name: '患者主诉' }), '最近饭后胃胀')
     await user.click(screen.getByRole('button', { name: '开始问诊' }))
 
-    expect(await screen.findByText('已收到，我会先按普通对话回答。')).toBeInTheDocument()
-    const streamRequest = findRequest(
-      fetchMock,
-      'POST',
-      `/api/conversations/${createdConversation.id}/runs/stream`,
-    )
-    expect(streamRequest?.[1]).toEqual(expect.objectContaining({
+    expect(await screen.findByLabelText('问诊已开始')).toBeInTheDocument()
+    const statusPanel = await screen.findByRole('complementary', { name: '问诊状态' })
+    expect(within(statusPanel).getByText('张三')).toBeInTheDocument()
+    expect(within(statusPanel).getByText('问诊中')).toBeInTheDocument()
+    const streamRequests = fetchMock.mock.calls.filter(([input, init]) => {
+      const url = new URL(String(input), 'http://localhost')
+      return url.pathname === `/api/conversations/${createdConversation.id}/runs/stream` &&
+        ((init as RequestInit | undefined)?.method ?? 'GET') === 'POST'
+    })
+    expect(streamRequests.at(-1)?.[1]).toEqual(expect.objectContaining({
       body: JSON.stringify({
-        content: '最近饭后胃胀',
+        content: buildConsultationStartMessage('最近饭后胃胀'),
         consultationContext: { patientId: patient.id },
       }),
     }))
@@ -688,13 +815,15 @@ describe('App routes and consultation entry', () => {
 
     await loginThroughUi(user)
 
-    expect(await screen.findByText('问诊·张三')).toBeInTheDocument()
-    expect(screen.getAllByText('问诊中').length).toBeGreaterThan(0)
+    const statusPanel = await screen.findByRole('complementary', { name: '问诊状态' })
+    expect(within(statusPanel).getByText('张三')).toBeInTheDocument()
+    expect(within(statusPanel).getByText('问诊中')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '完成问诊' }))
 
-    expect(await screen.findByText('问诊已完成')).toBeInTheDocument()
-    expect(screen.getByText('终态不可恢复，请新建对话')).toBeInTheDocument()
-    expect(screen.queryByText('问诊·张三')).not.toBeInTheDocument()
+    expect((await screen.findAllByText('问诊已完成')).length).toBeGreaterThan(0)
+    expect(
+      screen.getAllByRole('link', { name: '查看问诊结果' }).length,
+    ).toBeGreaterThan(0)
     expect(findRequest(
       fetchMock,
       'POST',
@@ -717,16 +846,15 @@ describe('App routes and consultation entry', () => {
     render(<App />)
 
     await loginThroughUi(user)
-    expect(await screen.findByText('问诊·张三')).toBeInTheDocument()
+    expect(await screen.findByRole('complementary', { name: '问诊状态' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '新对话' }))
 
     expect(await screen.findByRole('heading', { name: '新建对话' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '添加问诊标签' })).toBeInTheDocument()
     expect(screen.queryByText('问诊中')).not.toBeInTheDocument()
-    expect(screen.queryByText('问诊·张三')).not.toBeInTheDocument()
+    expect(screen.queryByRole('complementary', { name: '问诊状态' })).not.toBeInTheDocument()
   })
 
-  it('pauses on tag removal, keeps ordinary chat content-only, and resumes with the same tag', async () => {
+  it('pauses from the status panel, keeps ordinary chat content-only, and resumes explicitly', async () => {
     const conversationPage: ConversationPageResponse = {
       ...emptyConversationPageResponse,
       data: {
@@ -746,12 +874,10 @@ describe('App routes and consultation entry', () => {
     render(<App />)
 
     await loginThroughUi(user)
-    expect(await screen.findByText('问诊·张三')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '切换问诊患者，当前张三' }))
-    await user.click(within(screen.getByRole('dialog', { name: '选择档案' })).getByRole('button', { name: '不结合档案回答' }))
+    expect(await screen.findByRole('complementary', { name: '问诊状态' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '暂停问诊' }))
 
     expect((await screen.findAllByText('问诊已暂停')).length).toBeGreaterThan(0)
-    expect(screen.queryByText('问诊·张三')).not.toBeInTheDocument()
     await user.type(screen.getByRole('textbox', { name: '发送消息' }), '先问一个普通问题')
     await user.click(screen.getByRole('button', { name: '发送消息' }))
     expect(await screen.findByText('对话已继续。')).toBeInTheDocument()
@@ -762,11 +888,7 @@ describe('App routes and consultation entry', () => {
       body: JSON.stringify({ content: '先问一个普通问题' }),
     }))
 
-    await user.click(screen.getByRole('button', { name: '添加问诊标签' }))
-    await user.click(within(screen.getByRole('dialog', { name: '选择档案' })).getByRole('button', { name: '选择' }))
-    await user.clear(screen.getByRole('textbox', { name: '发送消息' }))
-    await user.type(screen.getByRole('textbox', { name: '发送消息' }), '继续刚才的问诊')
-    await user.click(screen.getByRole('button', { name: '发送消息' }))
+    await user.click(screen.getByRole('button', { name: '继续问诊' }))
 
     const streamRequests = fetchMock.mock.calls.filter(([input, init]) => {
       const url = new URL(String(input), 'http://localhost')
@@ -774,7 +896,7 @@ describe('App routes and consultation entry', () => {
     })
     expect(streamRequests.at(-1)?.[1]).toEqual(expect.objectContaining({
       body: JSON.stringify({
-        content: '继续刚才的问诊',
+        content: CONSULTATION_RESUME_MESSAGE,
         consultationContext: { patientId: patient.id },
       }),
     }))
@@ -796,7 +918,7 @@ describe('App routes and consultation entry', () => {
     await loginThroughUi(user)
 
     expect(await screen.findByRole('textbox', { name: '发送消息' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '添加问诊标签' })).toBeInTheDocument()
+    expect(screen.queryByRole('complementary', { name: '问诊状态' })).not.toBeInTheDocument()
     expect(findRequest(fetchMock, 'GET', '/api/patient/0')).toBeUndefined()
   })
 
@@ -820,7 +942,7 @@ describe('App routes and consultation entry', () => {
     render(<App />)
 
     await loginThroughUi(user)
-    expect(await screen.findByText('问诊·张三')).toBeInTheDocument()
+    expect(await screen.findByRole('complementary', { name: '问诊状态' })).toBeInTheDocument()
     await user.click(
       within(screen.getByRole('navigation', { name: '最近对话' }))
         .getByRole('link', { name: '打开对话：无法载入的对话' }),
@@ -828,6 +950,6 @@ describe('App routes and consultation entry', () => {
 
     expect(await screen.findByRole('heading', { name: '新建对话' })).toBeInTheDocument()
     expect(screen.queryByRole('textbox', { name: '发送消息' })).not.toBeInTheDocument()
-    expect(screen.queryByText('问诊·张三')).not.toBeInTheDocument()
+    expect(screen.queryByRole('complementary', { name: '问诊状态' })).not.toBeInTheDocument()
   })
 })

@@ -21,6 +21,11 @@ import {
 } from "./ConsultationFilesPanel";
 import { useConversationFiles } from "./useConversationFiles";
 import { ConversationActions } from "./ConversationActionsMenu";
+import { ConsultationOfferCard } from "./ConsultationOfferCard";
+import {
+  consultationMessageKind,
+  isConsultationTimelineMessage,
+} from "./consultationTimeline";
 
 const TCM_FLOW_PENDING_MESSAGE = "正在连接 tcm-flow...";
 const COLLABORATION_STATUS_LABELS: Readonly<
@@ -48,16 +53,17 @@ type ConsultationChatPanelProps = {
   tcmFlowEventsByMessageId: TcmFlowEventsByMessageId;
   collaborationByMessageId: Record<number, CollaborationStep[]>;
   taggedPatient: Patient | null;
+  suggestedPatient: Patient | null;
   consultationContext: ConsultationContext | null;
-  fileRefreshKey?: number;
-  showTagSuggestion: boolean;
   isControllingConsultation: boolean;
+  fileRefreshKey?: number;
+  consultationOfferMessageId: number | null;
   onDraftChange: (value: string) => void;
   onOpenArchiveSheet: () => void;
+  onOpenManualConsultation: () => void;
   onRemoveTag: () => Promise<void>;
-  onAddSuggestedTag: () => void;
-  onComplete: () => Promise<void>;
-  onCancel: () => Promise<void>;
+  onStartConsultation: (sourceComplaint: string) => Promise<void>;
+  onContinueConversation: () => void;
   onCancelRun: () => Promise<void>;
   onRetryHistory: () => void;
   onResumeRun: () => Promise<void>;
@@ -82,16 +88,17 @@ export function ConsultationChatPanel({
   tcmFlowEventsByMessageId,
   collaborationByMessageId,
   taggedPatient,
+  suggestedPatient,
   consultationContext,
-  fileRefreshKey = 0,
-  showTagSuggestion,
   isControllingConsultation,
+  fileRefreshKey = 0,
+  consultationOfferMessageId,
   onDraftChange,
   onOpenArchiveSheet,
+  onOpenManualConsultation,
   onRemoveTag,
-  onAddSuggestedTag,
-  onComplete,
-  onCancel,
+  onStartConsultation,
+  onContinueConversation,
   onCancelRun,
   onRetryHistory,
   onResumeRun,
@@ -103,11 +110,10 @@ export function ConsultationChatPanel({
   const [expandedThinkingMessageId, setExpandedThinkingMessageId] = useState<
     number | null
   >(null);
-  const isTerminalConsultation =
-    consultationContext?.status === "COMPLETED" ||
-    consultationContext?.status === "CANCELLED";
   const [expandedCollaborationMessageId, setExpandedCollaborationMessageId] =
     useState<number | null>(null);
+  const [dismissedConsultationOffers, setDismissedConsultationOffers] =
+    useState<Set<string>>(() => new Set());
   const latestAssistantMessageId = [...messages]
     .reverse()
     .find((message) => message.role === "ASSISTANT")?.id;
@@ -122,6 +128,13 @@ export function ConsultationChatPanel({
     fileWorkspace.files,
     messages
   );
+  const hasStartNode = messages.some(
+    (message) =>
+      consultationMessageKind(message.content) === "CONSULTATION_START"
+  );
+  const isTerminalConsultation =
+    consultationContext?.status === "COMPLETED" ||
+    consultationContext?.status === "CANCELLED";
 
   /* eslint-disable react-hooks/set-state-in-effect -- Expansion state intentionally follows the stream lifecycle. */
   useEffect(() => {
@@ -204,13 +217,36 @@ export function ConsultationChatPanel({
               </div>
             ) : null}
             <div className="consultation-chat-stream">
-              {messages.map((message) => {
+              {consultationContext && !hasStartNode ? (
+                <ConsultationTimelineNode
+                  kind="CONSULTATION_START"
+                  patientName={
+                    consultation.patientName ?? suggestedPatient?.name ?? null
+                  }
+                  consultationId={consultation.id}
+                />
+              ) : null}
+              {messages.map((message, messageIndex) => {
                 const messageEvents =
                   tcmFlowEventsByMessageId[message.id] ?? [];
                 const collaborationSteps =
                   collaborationByMessageId[message.id] ?? [];
                 const isLatestAssistantMessage =
                   message.id === latestAssistantMessageId;
+                const consultationOfferKey = [
+                  consultation.id,
+                  messageIndex,
+                  message.content,
+                ].join(":");
+                const hasLaterUserMessage = messages
+                  .slice(messageIndex + 1)
+                  .some((candidate) => candidate.role === "USER");
+                const isConsultationOffer =
+                  !consultationContext &&
+                  !hasLaterUserMessage &&
+                  !dismissedConsultationOffers.has(consultationOfferKey) &&
+                  (message.id === consultationOfferMessageId ||
+                    message.suggestedAction === "add_consultation_tag");
                 const shouldShowCollaboration =
                   message.role === "ASSISTANT" && collaborationSteps.length > 0;
                 const shouldShowThinkingProcess =
@@ -250,27 +286,80 @@ export function ConsultationChatPanel({
                       />
                     ) : null}
 
-                    <article
-                      className={
-                        message.role === "USER"
-                          ? "message-bubble user"
-                          : "message-bubble assistant"
-                      }
-                    >
-                      {isPendingAssistantMessage(message) ? (
-                        <TypingIndicator />
-                      ) : (
-                        <MessageContent
-                          message={message}
-                          artifacts={messageArtifacts.get(message.id) ?? []}
-                          isFileBusy={fileWorkspace.isBusy}
-                          onDownload={fileWorkspace.download}
-                        />
-                      )}
-                    </article>
+                    {isConsultationOffer ? null : isConsultationTimelineMessage(
+                        message
+                      ) ? (
+                      <ConsultationTimelineNode
+                        kind={consultationMessageKind(message.content)}
+                        patientName={
+                          consultation.patientName ??
+                          suggestedPatient?.name ??
+                          null
+                        }
+                        consultationId={consultation.id}
+                      />
+                    ) : (
+                      <article
+                        className={
+                          message.role === "USER"
+                            ? "message-bubble user"
+                            : "message-bubble assistant"
+                        }
+                      >
+                        {isPendingAssistantMessage(message) ? (
+                          <TypingIndicator />
+                        ) : (
+                          <MessageContent
+                            message={message}
+                            artifacts={messageArtifacts.get(message.id) ?? []}
+                            isFileBusy={fileWorkspace.isBusy}
+                            onDownload={fileWorkspace.download}
+                          />
+                        )}
+                      </article>
+                    )}
+
+                    {isConsultationOffer ? (
+                      <ConsultationOfferCard
+                        patient={suggestedPatient}
+                        disabled={isLoading || isRunBlocking}
+                        onSwitchPatient={onOpenArchiveSheet}
+                        onStart={() =>
+                          void (async () => {
+                            dismissConsultationOffer(
+                              consultationOfferKey,
+                              setDismissedConsultationOffers
+                            );
+                            await onStartConsultation(
+                              findConsultationSourceComplaint(
+                                messages,
+                                messageIndex
+                              )
+                            );
+                          })()
+                        }
+                        onContinue={() => {
+                          dismissConsultationOffer(
+                            consultationOfferKey,
+                            setDismissedConsultationOffers
+                          );
+                          onContinueConversation();
+                        }}
+                      />
+                    ) : null}
                   </Fragment>
                 );
               })}
+              {consultationContext &&
+              consultationContext.status !== "IN_PROGRESS" ? (
+                <ConsultationTimelineNode
+                  kind={consultationContext.status}
+                  patientName={
+                    consultation.patientName ?? suggestedPatient?.name ?? null
+                  }
+                  consultationId={consultation.id}
+                />
+              ) : null}
             </div>
           </div>
 
@@ -283,14 +372,6 @@ export function ConsultationChatPanel({
               onResume={onResumeRun}
               onRetry={onRetryRun}
             />
-            {showTagSuggestion && !taggedPatient && !isTerminalConsultation ? (
-              <div className="consultation-tag-suggestion" role="status">
-                <span>这条对话可能适合进入问诊，仅在你确认后添加标签。</span>
-                <button type="button" onClick={onAddSuggestedTag}>
-                  添加问诊标签
-                </button>
-              </div>
-            ) : null}
             <div className="message-input-shell archive-input-shell consultation-composer-shell consultation-conversation-composer">
               <label
                 className="visually-hidden"
@@ -334,7 +415,7 @@ export function ConsultationChatPanel({
                     {isTerminalConsultation ? (
                       <span className="archive-consult-chip consultation-tag-chip consultation-terminal-chip">
                         <MaterialIcon name="info" />
-                        终态不可恢复，请新建对话
+                        问诊已结束
                       </span>
                     ) : taggedPatient ? (
                       <span className="archive-consult-chip consultation-tag-chip is-switchable">
@@ -343,7 +424,7 @@ export function ConsultationChatPanel({
                           className="consultation-tag-patient-button"
                           aria-label={`切换问诊患者，当前${taggedPatient.name}`}
                           title="点击切换患者"
-                          onClick={onOpenArchiveSheet}
+                          onClick={onOpenManualConsultation}
                           disabled={
                             isLoading ||
                             isRunBlocking ||
@@ -356,7 +437,7 @@ export function ConsultationChatPanel({
                         <button
                           type="button"
                           className="consultation-tag-remove-button"
-                          aria-label="删除问诊标签并暂停问诊"
+                          aria-label="关闭主动问诊"
                           onClick={() => void onRemoveTag()}
                           disabled={
                             isLoading ||
@@ -371,45 +452,20 @@ export function ConsultationChatPanel({
                       <button
                         type="button"
                         className="archive-consult-chip"
-                        aria-label="添加问诊标签"
+                        aria-label="主动开启问诊"
                         title={archiveLabel}
-                        onClick={onOpenArchiveSheet}
-                        disabled={isLoading || isRunBlocking}
-                      >
-                        <MaterialIcon name="add" />
-                        问诊
-                      </button>
-                    )}
-                  </div>
-                  {consultationContext &&
-                  (consultationContext.status === "IN_PROGRESS" ||
-                    consultationContext.status === "PAUSED") ? (
-                    <div className="consultation-control-row">
-                      <button
-                        type="button"
-                        onClick={() => void onComplete()}
-                        disabled={
-                          isLoading ||
-                          isRunBlocking ||
-                          isControllingConsultation ||
-                          !consultationContext.analysis_ready
-                        }
-                      >
-                        完成问诊
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void onCancel()}
+                        onClick={onOpenManualConsultation}
                         disabled={
                           isLoading ||
                           isRunBlocking ||
                           isControllingConsultation
                         }
                       >
-                        取消问诊
+                        <MaterialIcon name="add" />
+                        问诊
                       </button>
-                    </div>
-                  ) : null}
+                    )}
+                  </div>
                 </div>
                 <button
                   type={isSending && canControlRun ? "button" : "submit"}
@@ -447,6 +503,97 @@ export function ConsultationChatPanel({
           <p>记录主诉后，消息区会自动切换为本次问诊会话。</p>
         </div>
       )}
+    </section>
+  );
+}
+
+/** 问诊建议只关联同一回复之前最近的一条普通用户消息。 */
+function findConsultationSourceComplaint(
+  messages: ConversationMessage[],
+  assistantMessageIndex: number
+) {
+  for (let index = assistantMessageIndex - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message.role === "USER" && !isConsultationTimelineMessage(message)) {
+      return message.content.trim();
+    }
+  }
+  return "";
+}
+
+/** 记住本次界面中用户已处理的建议，避免历史对账后因消息 ID 变化再次出现。 */
+function dismissConsultationOffer(
+  offerKey: string,
+  setDismissedOffers: React.Dispatch<React.SetStateAction<Set<string>>>
+) {
+  setDismissedOffers((current) => {
+    const next = new Set(current);
+    next.add(offerKey);
+    return next;
+  });
+}
+
+function ConsultationTimelineNode({
+  kind,
+  patientName,
+  consultationId,
+}: {
+  kind:
+    | NonNullable<ConversationMessage["displayKind"]>
+    | "PAUSED"
+    | "COMPLETED"
+    | "CANCELLED";
+  patientName: string | null;
+  consultationId: number;
+}) {
+  if (kind === "MESSAGE") return null;
+
+  const content = {
+    CONSULTATION_START: {
+      icon: "medicalServices" as const,
+      title: "问诊已开始",
+      description: patientName
+        ? `本次问诊已绑定患者 ${patientName}`
+        : "本次问诊已开始采集信息",
+    },
+    CONSULTATION_RESUME: {
+      icon: "history" as const,
+      title: "继续问诊",
+      description: "已恢复此前保存的问诊进度",
+    },
+    PAUSED: {
+      icon: "history" as const,
+      title: "问诊已暂停",
+      description: "已采集的信息已经保存",
+    },
+    COMPLETED: {
+      icon: "checkCircle" as const,
+      title: "问诊已完成",
+      description: "问诊结果已经生成",
+    },
+    CANCELLED: {
+      icon: "close" as const,
+      title: "问诊已取消",
+      description: "本次问诊已结束，不会继续采集",
+    },
+  }[kind];
+
+  return (
+    <section
+      className={`consultation-timeline-node kind-${kind.toLowerCase()}`}
+      aria-label={content.title}
+    >
+      <span className="consultation-timeline-line" aria-hidden="true" />
+      <span className="consultation-timeline-icon" aria-hidden="true">
+        <MaterialIcon name={content.icon} />
+      </span>
+      <div>
+        <strong>{content.title}</strong>
+        <small>{content.description}</small>
+      </div>
+      {kind === "COMPLETED" ? (
+        <a href={`/consultation-records/${consultationId}`}>查看问诊结果</a>
+      ) : null}
     </section>
   );
 }
