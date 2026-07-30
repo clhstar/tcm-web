@@ -258,6 +258,16 @@ export function ConversationWorkspace({
     }
   }
 
+  async function handleContinueSuggestedConversation(sourceComplaint: string) {
+    const offerMessageId = consultationOfferMessageId;
+    consultationState.dismissConsultationOffer();
+    const answered = await session.continueAsGeneral(sourceComplaint);
+    if (!answered && offerMessageId !== null) {
+      consultationState.revealConsultationOffer(offerMessageId);
+    }
+    return answered;
+  }
+
   async function handleResumeConsultation() {
     if (!selectedPatient) {
       showConsultationError("当前问诊缺少患者信息，暂时无法继续。");
@@ -372,9 +382,7 @@ export function ConversationWorkspace({
                   onOpenManualConsultation={openManualConsultationPicker}
                   onRemoveTag={handleRemoveManualConsultation}
                   onStartConsultation={handleStartSuggestedConsultation}
-                  onContinueConversation={
-                    consultationState.dismissConsultationOffer
-                  }
+                  onContinueConversation={handleContinueSuggestedConversation}
                   onCancelRun={session.cancelCurrentRun}
                   onRetryHistory={() => {
                     if (activeConversation) {

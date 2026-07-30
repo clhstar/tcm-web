@@ -63,7 +63,7 @@ type ConsultationChatPanelProps = {
   onOpenManualConsultation: () => void;
   onRemoveTag: () => Promise<void>;
   onStartConsultation: (sourceComplaint: string) => Promise<void>;
-  onContinueConversation: () => void;
+  onContinueConversation: (sourceComplaint: string) => Promise<boolean>;
   onCancelRun: () => Promise<void>;
   onRetryHistory: () => void;
   onResumeRun: () => Promise<void>;
@@ -338,13 +338,26 @@ export function ConsultationChatPanel({
                             );
                           })()
                         }
-                        onContinue={() => {
-                          dismissConsultationOffer(
-                            consultationOfferKey,
-                            setDismissedConsultationOffers
-                          );
-                          onContinueConversation();
-                        }}
+                        onContinue={() =>
+                          void (async () => {
+                            dismissConsultationOffer(
+                              consultationOfferKey,
+                              setDismissedConsultationOffers
+                            );
+                            const answered = await onContinueConversation(
+                              findConsultationSourceComplaint(
+                                messages,
+                                messageIndex
+                              )
+                            );
+                            if (!answered) {
+                              restoreConsultationOffer(
+                                consultationOfferKey,
+                                setDismissedConsultationOffers
+                              );
+                            }
+                          })()
+                        }
                       />
                     ) : null}
                   </Fragment>
@@ -529,6 +542,18 @@ function dismissConsultationOffer(
   setDismissedOffers((current) => {
     const next = new Set(current);
     next.add(offerKey);
+    return next;
+  });
+}
+
+/** 普通回答启动失败时恢复卡片，允许用户重试。 */
+function restoreConsultationOffer(
+  offerKey: string,
+  setDismissedOffers: React.Dispatch<React.SetStateAction<Set<string>>>
+) {
+  setDismissedOffers((current) => {
+    const next = new Set(current);
+    next.delete(offerKey);
     return next;
   });
 }

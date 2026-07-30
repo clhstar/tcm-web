@@ -205,6 +205,7 @@ export type StreamConsultationRunInput = {
   consultationId: number
   message: string
   patientId?: number
+  continueAsGeneral?: boolean
   signal?: AbortSignal
   onEvent: (event: TcmFlowSseEvent) => void
 }
@@ -320,13 +321,20 @@ export async function streamConsultationRun(
   input: StreamConsultationRunInput,
 ): Promise<StreamConsultationRunResult> {
   const normalizedMessage = input.message.trim()
+  const requestBody = input.patientId == null
+    ? {
+        content: normalizedMessage,
+        ...(input.continueAsGeneral ? { continueAsGeneral: true } : {}),
+      }
+    : {
+        content: normalizedMessage,
+        consultationContext: { patientId: input.patientId },
+      }
   const response = await fetchApiResponse(
     `${conversationPath(input.consultationId)}/runs/stream`,
     {
       method: 'POST',
-      body: JSON.stringify(input.patientId == null
-        ? { content: normalizedMessage }
-        : { content: normalizedMessage, consultationContext: { patientId: input.patientId } }),
+      body: JSON.stringify(requestBody),
       signal: input.signal,
     },
   )

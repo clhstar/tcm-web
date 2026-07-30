@@ -35,6 +35,28 @@ describe('conversation consultation contract', () => {
     )
   })
 
+  it('marks an accepted consultation offer as a confirmed general answer', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(streamResponse())
+    vi.stubGlobal('fetch', fetchMock)
+
+    await streamConsultationRun({
+      consultationId: 7,
+      message: '最近饭后胃胀',
+      continueAsGeneral: true,
+      onEvent: () => {},
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:4040/api/conversations/7/runs/stream',
+      expect.objectContaining({
+        body: JSON.stringify({
+          content: '最近饭后胃胀',
+          continueAsGeneral: true,
+        }),
+      }),
+    )
+  })
+
   it('sends only patientId inside an explicit consultation tag', async () => {
     const fetchMock = vi.fn().mockResolvedValue(streamResponse())
     vi.stubGlobal('fetch', fetchMock)

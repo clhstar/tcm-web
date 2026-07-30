@@ -148,6 +148,7 @@ export function useConversationSession({
     startConversation: actions.startConversation,
     sendMessage: messaging.sendMessage,
     startConsultation: messaging.startConsultation,
+    continueAsGeneral: messaging.continueAsGeneral,
     cancelCurrentRun: messaging.cancelCurrentRun,
     resumeCurrentRun: messaging.resumeCurrentRun,
     retryCurrentRun: messaging.retryCurrentRun,

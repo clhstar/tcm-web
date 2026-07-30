@@ -80,7 +80,7 @@ function props(overrides: Record<string, unknown> = {}) {
     onOpenManualConsultation: vi.fn(),
     onRemoveTag: vi.fn().mockResolvedValue(undefined),
     onStartConsultation: vi.fn().mockResolvedValue(undefined),
-    onContinueConversation: vi.fn(),
+    onContinueConversation: vi.fn().mockResolvedValue(true),
     onCancelRun: vi.fn().mockResolvedValue(undefined),
     onRetryHistory: vi.fn(),
     onResumeRun: vi.fn().mockResolvedValue(undefined),

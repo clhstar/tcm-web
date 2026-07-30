@@ -37,6 +37,8 @@ type SendConsultationMessageInput = {
   content: string
   replaceMessages?: boolean
   patientId?: number
+  continueAsGeneral?: boolean
+  reuseLastUserMessage?: boolean
   onConsultationContext?: (context: ConsultationContext) => void
   onSuggestedAction?: (assistantMessageId: number) => void
   onConversationTitle?: (title: string) => void
@@ -244,6 +246,8 @@ export function useConsultationStream() {
     content,
     replaceMessages = false,
     patientId,
+    continueAsGeneral,
+    reuseLastUserMessage = false,
     onConsultationContext,
     onSuggestedAction,
     onConversationTitle,
@@ -261,7 +265,9 @@ export function useConsultationStream() {
     }
     setRunId(null)
     setRunStatus(null)
-    const userMessage = createLocalMessage(consultation.id, 'USER', content)
+    const userMessage = reuseLastUserMessage
+      ? null
+      : createLocalMessage(consultation.id, 'USER', content)
     const assistantMessage = createLocalMessage(
       consultation.id,
       'ASSISTANT',
@@ -280,6 +286,7 @@ export function useConsultationStream() {
         consultationId: consultation.id,
         message: content,
         patientId,
+        continueAsGeneral,
         signal: abortController.signal,
         onEvent: (event) => {
           if (isCurrent()) {

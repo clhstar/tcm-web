@@ -16,7 +16,7 @@ type ConsultationOfferCardProps = {
   onContinue: () => void;
 };
 
-/** 普通回复后的显式问诊确认，不在用户确认前改变业务状态。 */
+/** 症状识别后的显式问诊确认，不在用户确认前调用普通模型或改变问诊状态。 */
 export function ConsultationOfferCard({
   patient,
   disabled,

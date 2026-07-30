@@ -110,6 +110,8 @@ export function useConversationMessaging({
     options: {
       replaceMessages?: boolean
       taggedPatient?: Patient | null
+      continueAsGeneral?: boolean
+      reuseLastUserMessage?: boolean
     } = {},
   ) {
     const operationOwner = operationGate.acquire(
@@ -130,6 +132,8 @@ export function useConversationMessaging({
         content,
         replaceMessages: options.replaceMessages,
         patientId: messagePatientId(messageTag),
+        continueAsGeneral: options.continueAsGeneral,
+        reuseLastUserMessage: options.reuseLastUserMessage,
         onConsultationContext: (context) => {
           if (
             !isContextForActiveConversation(
@@ -210,6 +214,31 @@ export function useConversationMessaging({
     }
   }
 
+  async function continueAsGeneral(content: string) {
+    if (
+      !conversation ||
+      activeConversationIdRef.current !== conversation.id ||
+      isLoading() ||
+      stream.isRunBlocking ||
+      operationGate.isLocked()
+    ) {
+      return false
+    }
+
+    try {
+      return await runChat(conversation, content, {
+        taggedPatient: null,
+        continueAsGeneral: true,
+        reuseLastUserMessage: true,
+      })
+    } catch {
+      if (activeConversationIdRef.current === conversation.id) {
+        showError(FALLBACK_CONVERSATION_ERROR)
+      }
+      return false
+    }
+  }
+
   async function resumeCurrentRun() {
     await handleRecoverableRunAction(
       stream.resumeRun,
@@ -259,6 +288,7 @@ export function useConversationMessaging({
     runStatus: stream.runStatus,
     sendMessage,
     startConsultation,
+    continueAsGeneral,
     runChat,
     cancelCurrentRun,
     resumeCurrentRun,

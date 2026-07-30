@@ -205,9 +205,11 @@ function installFetchRouter(options: FetchRouterOptions = {}) {
       const requestBody = JSON.parse(String(init.body)) as {
         content: string
         consultationContext?: { patientId: number }
+        continueAsGeneral?: boolean
       }
       const isStartingConsultation =
         requestBody.consultationContext?.patientId === patient.id
+      const isContinuingAsGeneral = requestBody.continueAsGeneral === true
       return sseResponse([
         {
           event: 'metadata',
@@ -233,10 +235,12 @@ function installFetchRouter(options: FetchRouterOptions = {}) {
               status: 'completed',
               assistant_message: isStartingConsultation
                 ? '问诊已经开始，请问症状持续多久了？'
-                : '检测到你正在描述个人不适，建议开始问诊，以便按步骤补充关键信息。',
+                : isContinuingAsGeneral
+                  ? '普通模型回答：饭后胃胀可能与饮食或消化状态有关。'
+                  : '检测到你正在描述个人不适，建议开始问诊，以便按步骤补充关键信息。',
               pending_clarification: [],
               references: [],
-              ...(isStartingConsultation
+              ...(isStartingConsultation || isContinuingAsGeneral
                 ? {}
                 : { suggested_action: 'add_consultation_tag' }),
             },
@@ -671,16 +675,26 @@ describe('App routes and consultation entry', () => {
     expect(screen.getByRole('button', { name: '继续对话' })).toBeInTheDocument()
     expect(screen.queryByRole('complementary', { name: '问诊状态' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '继续对话' }))
+    expect(
+      await screen.findByText('普通模型回答：饭后胃胀可能与饮食或消化状态有关。'),
+    ).toBeInTheDocument()
     expect(screen.queryByLabelText('是否开始问诊')).not.toBeInTheDocument()
+    expect(screen.getAllByText('最近饭后胃胀')).toHaveLength(1)
     const createRequest = findRequest(fetchMock, 'POST', '/api/conversations')
-    const streamRequest = findRequest(
-      fetchMock,
-      'POST',
-      `/api/conversations/${createdConversation.id}/runs/stream`,
-    )
+    const streamRequests = fetchMock.mock.calls.filter(([input, init]) => {
+      const url = new URL(String(input), 'http://localhost')
+      return url.pathname === `/api/conversations/${createdConversation.id}/runs/stream` &&
+        ((init as RequestInit | undefined)?.method ?? 'GET') === 'POST'
+    })
     expect(createRequest?.[1]).toEqual(expect.objectContaining({ body: '{}' }))
-    expect(streamRequest?.[1]).toEqual(expect.objectContaining({
+    expect(streamRequests[0]?.[1]).toEqual(expect.objectContaining({
       body: JSON.stringify({ content: '最近饭后胃胀' }),
+    }))
+    expect(streamRequests[1]?.[1]).toEqual(expect.objectContaining({
+      body: JSON.stringify({
+        content: '最近饭后胃胀',
+        continueAsGeneral: true,
+      }),
     }))
   })
 

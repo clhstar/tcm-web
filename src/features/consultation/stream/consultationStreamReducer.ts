@@ -40,7 +40,7 @@ export type ConsultationStreamAction =
     }
   | {
       type: 'start'
-      userMessage: ConversationMessage
+      userMessage: ConversationMessage | null
       assistantMessage: ConversationMessage
       replaceMessages: boolean
     }
@@ -72,8 +72,12 @@ export function consultationStreamReducer(
       return {
         lifecycle: 'connecting',
         messages: action.replaceMessages
-          ? [action.userMessage, action.assistantMessage]
-          : [...state.messages, action.userMessage, action.assistantMessage],
+          ? action.userMessage
+            ? [action.userMessage, action.assistantMessage]
+            : [action.assistantMessage]
+          : action.userMessage
+            ? [...state.messages, action.userMessage, action.assistantMessage]
+            : [...state.messages, action.assistantMessage],
         eventsByMessageId: action.replaceMessages
           ? { [action.assistantMessage.id]: [] }
           : { ...state.eventsByMessageId, [action.assistantMessage.id]: [] },
